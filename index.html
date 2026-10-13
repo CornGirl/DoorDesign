@@ -1,0 +1,4289 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>等比例門板尺寸貼圖與測量模擬器 v3.0 (73 × 197 cm)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入本地資料夾圖片 DataURL 快取庫 (解決 file:/// 協定跨來源限制，確保 100% 成功自動裁切留白) -->
+  <script src="images_data.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen w-screen flex flex-col overflow-hidden font-sans select-none">
+
+  <!-- 頂部導航列 -->
+  <header class="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between shrink-0 shadow-sm z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-sky-600 flex items-center justify-center text-white font-bold shadow-md shadow-sky-200">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z M9 4v16 M15 11h1" />
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-bold text-slate-900 leading-tight">門板等比例貼圖與測量模擬器</h1>
+          <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">v3.0 專業工程版</span>
+        </div>
+        <p class="text-xs text-slate-500">標準門板規格：寬 73.0 cm × 高 197.0 cm (尺規位於外圍獨立區域，零重疊)</p>
+      </div>
+    </div>
+
+    <!-- 中間視角縮放控制列 -->
+    <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 p-1 rounded-lg text-xs">
+      <button id="btnZoomOut" title="縮小 (滾輪向下)" class="px-2 py-1 text-slate-600 hover:bg-white rounded transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+      </button>
+      <span id="zoomLevelDisplay" class="font-mono font-medium px-2 min-w-[50px] text-center text-slate-700">100%</span>
+      <button id="btnZoomIn" title="放大 (滾輪向上)" class="px-2 py-1 text-slate-600 hover:bg-white rounded transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      </button>
+      <div class="w-px h-4 bg-slate-200 mx-1"></div>
+      <button id="btnFitScreen" class="px-2.5 py-1 text-slate-600 hover:bg-white rounded font-medium transition">自適應視窗</button>
+      <button id="btnResetZoom" class="px-2.5 py-1 text-slate-600 hover:bg-white rounded font-medium transition">100%</button>
+    </div>
+
+    <!-- 右側操作：工具切換與匯出 -->
+    <div class="flex items-center gap-2">
+      <button id="btnToolSelect" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-300 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+        選取與移動
+      </button>
+      <button id="btnToolRuler" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+        測量尺 (Ruler)
+      </button>
+
+      <div class="w-px h-5 bg-slate-200 mx-1"></div>
+
+      <!-- 自動儲存狀態標籤與按鈕 -->
+      <div id="autoSaveIndicator" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 transition" title="畫布進度自動儲存狀態">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="autoSaveStatusText">自動儲存：就緒</span>
+      </div>
+
+      <button id="btnManualSave" title="手動立即儲存進度" class="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium bg-slate-50 text-slate-700 border border-slate-200 hover:bg-white hover:text-sky-700 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+        儲存
+      </button>
+
+      <button id="btnResetCanvasState" title="清空畫布與重置儲存進度" class="px-2 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition">
+        重置
+      </button>
+
+      <div class="w-px h-5 bg-slate-200 mx-1"></div>
+
+      <button id="btnExportList" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition shadow-xs">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        尺寸清單
+      </button>
+
+      <button id="btnExportImage" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition shadow-xs">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        匯出預覽
+      </button>
+
+      <button id="btnOpenPrintImposition" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition shadow-sm" title="將門板所有圖片自動緊湊拼版在一大卷貼紙上，自剪最省錢！">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+        🖨️ 影印店大圖輸出／拼版省錢
+      </button>
+    </div>
+  </header>
+
+  <!-- 主體區塊：中央畫布 + 右側面板 -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- 中央工作畫布區 -->
+    <main id="viewportContainer" class="flex-1 bg-slate-200/90 relative overflow-hidden select-none touch-none">
+      
+      <!-- 提示條（浮動） -->
+      <div class="absolute top-3 left-4 z-20 flex gap-2 pointer-events-none">
+        <div class="bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm text-xs text-slate-700 flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>刻度尺置於外圍獨立區，<strong>與白色門板完全分開</strong>，零重疊干擾</span>
+        </div>
+        <div id="rulerGuideTag" class="hidden bg-amber-500 text-white px-3 py-1.5 rounded-lg shadow-sm text-xs font-medium">
+          📐 測量模式中：在畫布上按住滑鼠拖曳拉出兩點即可測量真實 cm 距離
+        </div>
+      </div>
+
+      <!-- 畫布平移縮放層 -->
+      <div id="panZoomLayer" class="absolute top-0 left-0 origin-top-left transition-none">
+        <!-- 統一高畫質一體化畫布 (Unified Workbench Canvas) -->
+        <canvas id="mainCanvas" class="shadow-2xl rounded-sm block cursor-default bg-white"></canvas>
+      </div>
+
+      <!-- 操作輔助指南 -->
+      <div class="absolute bottom-4 left-4 z-20 text-xs text-slate-500 bg-white/80 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs pointer-events-none flex items-center gap-3">
+        <span>滾輪：縮放</span>
+        <span>•</span>
+        <span>空白鍵+拖曳 / 滑鼠中鍵：平移畫布</span>
+        <span>•</span>
+        <span>鍵盤方向鍵：微調位置</span>
+      </div>
+    </main>
+
+    <!-- 右側控制面板 -->
+    <aside class="w-88 md:w-96 bg-white border-l border-slate-200 flex flex-col shrink-0 shadow-xl z-30">
+      
+      <!-- 標籤導覽 (Tabs) -->
+      <div class="flex border-b border-slate-200 text-xs font-semibold text-slate-600 shrink-0 bg-slate-50">
+        <button id="tabBtnGallery" class="flex-1 py-3 px-2 border-b-2 border-sky-600 text-sky-700 bg-white transition flex items-center justify-center gap-1.5 font-bold">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          資料夾圖片庫
+        </button>
+        <button id="tabBtnElement" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 transition flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          屬性與圖層
+        </button>
+        <button id="tabBtnDoor" class="flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 transition flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          門板參數
+        </button>
+      </div>
+
+      <!-- 面板內容區域 (滾動) -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+        
+        <!-- Tab 0: 資料夾圖片庫面板 (Gallery) -->
+        <div id="tabContentGallery" class="space-y-4">
+          
+          <div class="p-3 bg-amber-50/80 border border-amber-200 rounded-lg space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <span>✂️ 自動裁切透明留白</span>
+              </span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="chkAutoTrimWhitespace" type="checkbox" checked class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+              </label>
+            </div>
+            <p class="text-[11px] text-amber-700 leading-relaxed">
+              點選加入時自動去除多餘透明留白，手柄完全貼合角色，量測尺寸為 <strong>100% 角色實體尺寸</strong>。
+            </p>
+          </div>
+
+          <div class="flex gap-2">
+            <button id="btnLoadAllFolderImages" class="flex-1 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+              <span>🚀 一鍵載入全部圖片到畫布</span>
+            </button>
+            <button id="btnClearAllCanvas" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium rounded-lg text-xs border border-rose-200 transition">
+              清空
+            </button>
+          </div>
+
+          <!-- 上傳自訂圖片區塊 (自動存檔至資料夾並永久加入側邊欄) -->
+          <div class="bg-gradient-to-br from-sky-50 to-indigo-50/50 border border-sky-200 rounded-xl p-3 space-y-2 shadow-2xs">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-sky-900 flex items-center gap-1.5">
+                <span>📤 上傳圖片 (自動存檔)</span>
+              </span>
+              <span id="serverStatusBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-white text-slate-500 border border-slate-200 shadow-2xs">
+                檢測本機伺服器...
+              </span>
+            </div>
+            <label class="block cursor-pointer bg-white hover:bg-sky-50 border-2 border-dashed border-sky-300 hover:border-sky-500 rounded-lg p-3 text-center transition group shadow-2xs">
+              <div class="w-8 h-8 rounded-full bg-sky-100 group-hover:bg-sky-200 text-sky-600 flex items-center justify-center mx-auto mb-1 group-hover:scale-105 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              </div>
+              <span class="text-xs font-bold text-slate-800 block">點擊上傳新圖片 (支援多選)</span>
+              <span class="text-[10px] text-slate-500 block mt-0.5">或直接拖曳圖片到此 / Ctrl+V 貼上</span>
+              <span class="text-[9px] text-sky-600 font-medium block mt-1">★ 自動在資料夾新增檔案 ＆ 側邊欄永久保留 ＆ 自動儲存</span>
+              <input id="imageFileInput" type="file" accept="image/*" multiple class="hidden" />
+            </label>
+          </div>
+
+          <!-- 📋 門板素材清單 (支援手動新增、修改名稱、刪除，保持側邊欄簡潔) -->
+          <div class="space-y-2.5 pt-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <span>📋 素材清單</span>
+                <span id="materialCountBadge" class="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded-full font-bold">0</span>
+              </span>
+              <div class="flex items-center gap-1">
+                <button id="btnClearPresetMaterials" title="一鍵清除所有內建預設素材，只保留自己上傳的圖片，側邊欄不雜亂" class="text-[10px] text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2 py-0.5 rounded border border-rose-200 transition font-medium">
+                  🧹 清除預設素材
+                </button>
+                <button id="btnRestorePresetMaterials" title="還原原廠 18 張內建模擬素材" class="text-[10px] text-slate-500 hover:text-sky-700 bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 transition">
+                  還原預設
+                </button>
+              </div>
+            </div>
+
+            <!-- 搜尋與篩選列 -->
+            <div class="flex items-center gap-1.5">
+              <div class="relative flex-1">
+                <input id="searchMaterialInput" type="text" placeholder="搜尋素材名稱..." class="w-full text-xs pl-6 pr-2 py-1 bg-white border border-slate-200 rounded-md outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 font-normal" />
+                <span class="absolute left-1.5 top-1 text-slate-400 text-xs">🔍</span>
+              </div>
+              <select id="filterMaterialSelect" class="text-[11px] py-1 px-1 bg-white border border-slate-200 rounded-md text-slate-600 outline-none">
+                <option value="all">全部素材</option>
+                <option value="custom">僅自訂上傳</option>
+                <option value="preset">僅預設素材</option>
+              </select>
+            </div>
+
+            <!-- 素材清單網格 (支援每張圖片手動修改名稱 ＆ 手動刪除) -->
+            <div id="materialsGrid" class="grid grid-cols-2 gap-2.5 pt-0.5"></div>
+          </div>
+
+        </div>
+
+        <!-- Tab 1: 素材屬性與圖層管理 -->
+        <div id="tabContentElement" class="space-y-4 hidden">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">畫布上的素材 (<span id="layerCountText">0</span>)</label>
+              <span class="text-[10px] text-slate-400">上方為頂層 (最前)</span>
+            </div>
+            <div id="layerListContainer" class="max-h-48 overflow-y-auto space-y-1.5 bg-slate-50 p-2 rounded-lg border border-slate-200">
+              <div class="text-xs text-slate-400 text-center py-4">畫布上尚無任何圖片</div>
+            </div>
+          </div>
+
+          <div id="selectionInspector" class="border-t border-slate-200 pt-3 space-y-3 hidden">
+            <!-- 選中素材標題與刪除按鈕 -->
+            <div class="flex items-center justify-between bg-sky-50 px-3 py-2 rounded-lg border border-sky-100">
+              <div class="flex items-center gap-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0"></span>
+                <span class="font-bold text-slate-800 text-xs truncate max-w-[150px]" id="selectedItemName">圖片</span>
+              </div>
+              <button id="btnDeleteSelected" title="刪除素材 (Delete)" class="px-2 py-0.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 rounded text-xs transition">刪除素材</button>
+            </div>
+
+            <!-- 🌟 圖層疊放順序 (向上一層 / 向下一層 / 移至頂層 / 移至底層) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-700">疊圖前後順序</span>
+                <span id="layerRankBadge" class="text-[10px] font-mono text-sky-700 font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">第 1 / 1 層</span>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5 text-xs">
+                <button id="btnLayerBringToFront" class="py-1.5 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition flex flex-col items-center justify-center gap-0.5 group" title="移至最前頂層 (Shift + ])">
+                  <span class="text-xs">⏫</span>
+                  <span class="text-[10px] font-bold text-slate-700 group-hover:text-sky-800">移至頂層</span>
+                </button>
+                <button id="btnLayerBringForward" class="py-1.5 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition flex flex-col items-center justify-center gap-0.5 group" title="向上一層 / 前移 (])">
+                  <span class="text-xs">🔼</span>
+                  <span class="text-[10px] font-bold text-slate-700 group-hover:text-sky-800">向上一層</span>
+                </button>
+                <button id="btnLayerSendBackward" class="py-1.5 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition flex flex-col items-center justify-center gap-0.5 group" title="向下一層 / 後移 ([)">
+                  <span class="text-xs">🔽</span>
+                  <span class="text-[10px] font-bold text-slate-700 group-hover:text-sky-800">向下一層</span>
+                </button>
+                <button id="btnLayerSendToBack" class="py-1.5 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition flex flex-col items-center justify-center gap-0.5 group" title="移至最後底層 (Shift + [)">
+                  <span class="text-xs">⏬</span>
+                  <span class="text-[10px] font-bold text-slate-700 group-hover:text-sky-800">移至底層</span>
+                </button>
+              </div>
+              <div class="text-[10px] text-slate-400 flex justify-between items-center px-0.5 pt-0.5">
+                <span>💡 快捷鍵：<kbd class="px-1 bg-white border border-slate-200 rounded text-[9px] font-mono text-slate-600">]</kbd> 上移 <kbd class="px-1 bg-white border border-slate-200 rounded text-[9px] font-mono text-slate-600">[</kbd> 下移</span>
+                <span class="text-sky-600 font-medium">快速疊圖不重傳</span>
+              </div>
+            </div>
+
+            <!-- 實體尺寸數值 (cm) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2.5">
+              <div class="text-[11px] font-bold text-sky-900 flex justify-between items-center">
+                <span>實體輸出尺寸 (公分 cm)</span>
+                <span id="aspectRatioBadge" class="text-sky-600 font-normal text-[10px]">鎖定比例</span>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label class="text-slate-500 block text-[11px] mb-0.5">寬度 (W cm)</label>
+                  <div class="flex items-center bg-white border border-slate-300 rounded px-2 py-1 focus-within:ring-1 focus-within:ring-sky-500">
+                    <input id="inputWidthCm" type="number" step="0.1" min="0.5" class="w-full text-right outline-none font-mono font-bold text-slate-800" />
+                    <span class="text-slate-400 text-[10px] ml-1">cm</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="text-slate-500 block text-[11px] mb-0.5">高度 (H cm)</label>
+                  <div class="flex items-center bg-white border border-slate-300 rounded px-2 py-1 focus-within:ring-1 focus-within:ring-sky-500">
+                    <input id="inputHeightCm" type="number" step="0.1" min="0.5" class="w-full text-right outline-none font-mono font-bold text-slate-800" />
+                    <span class="text-slate-400 text-[10px] ml-1">cm</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 比例鎖定與還原 -->
+              <div class="flex items-center justify-between pt-0.5">
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600">
+                  <input id="chkLockAspectRatio" type="checkbox" checked class="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5" />
+                  等比例縮放 (鎖定長寬比)
+                </label>
+                <button id="btnResetOriginalAspect" class="text-[10px] text-sky-600 hover:underline">還原原圖比</button>
+              </div>
+
+              <!-- 🌟 常用紙張規格快速帶入 (A3, A4, A5, A6, B4, B5, 方形) -->
+              <div class="border-t border-slate-200/80 pt-2 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-slate-700">快速帶入常用紙張規格</span>
+                  <!-- 直向 / 橫向 切換 -->
+                  <div class="inline-flex rounded-md shadow-2xs text-[10px] border border-slate-200 bg-white p-0.5">
+                    <button id="btnPaperPortrait" class="px-2 py-0.5 rounded font-bold bg-sky-100 text-sky-800 transition">直向 ▯</button>
+                    <button id="btnPaperLandscape" class="px-2 py-0.5 rounded text-slate-600 hover:text-slate-900 transition">橫向 ▭</button>
+                  </div>
+                </div>
+
+                <!-- 規格按鈕網格 -->
+                <div class="grid grid-cols-4 gap-1.5">
+                  <button class="paper-preset-btn py-1 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition group" data-paper="a4">
+                    <span class="font-bold text-xs text-sky-900 block leading-tight">A4</span>
+                    <span class="text-[9px] text-slate-400 block paper-dim-label">21×29.7</span>
+                  </button>
+                  <button class="paper-preset-btn py-1 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition group" data-paper="a5">
+                    <span class="font-bold text-xs text-sky-900 block leading-tight">A5</span>
+                    <span class="text-[9px] text-slate-400 block paper-dim-label">14.8×21</span>
+                  </button>
+                  <button class="paper-preset-btn py-1 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition group" data-paper="b4">
+                    <span class="font-bold text-xs text-sky-900 block leading-tight">B4</span>
+                    <span class="text-[9px] text-slate-400 block paper-dim-label">25.7×36.4</span>
+                  </button>
+                  <button class="paper-preset-btn py-1 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition group" data-paper="b5">
+                    <span class="font-bold text-xs text-sky-900 block leading-tight">B5</span>
+                    <span class="text-[9px] text-slate-400 block paper-dim-label">18.2×25.7</span>
+                  </button>
+                  <button class="paper-preset-btn py-1 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition group" data-paper="a3">
+                    <span class="font-bold text-xs text-sky-900 block leading-tight">A3</span>
+                    <span class="text-[9px] text-slate-400 block paper-dim-label">29.7×42</span>
+                  </button>
+                  <button class="paper-preset-btn py-1 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition group" data-paper="a6">
+                    <span class="font-bold text-xs text-sky-900 block leading-tight">A6</span>
+                    <span class="text-[9px] text-slate-400 block paper-dim-label">10.5×14.8</span>
+                  </button>
+                  <button class="paper-preset-btn py-1 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition group" data-paper="sq15">
+                    <span class="font-bold text-xs text-sky-900 block leading-tight">方 15</span>
+                    <span class="text-[9px] text-slate-400 block paper-dim-label">15×15</span>
+                  </button>
+                  <button class="paper-preset-btn py-1 px-1 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded text-center transition group" data-paper="sq20">
+                    <span class="font-bold text-xs text-sky-900 block leading-tight">方 20</span>
+                    <span class="text-[9px] text-slate-400 block paper-dim-label">20×20</span>
+                  </button>
+                </div>
+                <div class="text-[10px] text-slate-400 flex justify-between items-center px-0.5">
+                  <span>💡 點擊一鍵套用尺寸</span>
+                  <span class="text-sky-600">支援等比例最適化</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 位置座標與快速對齊 -->
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+              <span class="text-[11px] font-bold text-slate-700 block">門板上座標位置 (以門板左上角為基準)</span>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label class="text-slate-500 block text-[11px] mb-0.5">距左邊緣 (X cm)</label>
+                  <div class="flex items-center bg-white border border-slate-300 rounded px-2 py-1">
+                    <input id="inputPosXCm" type="number" step="0.5" class="w-full text-right outline-none font-mono" />
+                    <span class="text-slate-400 text-[10px] ml-1">cm</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="text-slate-500 block text-[11px] mb-0.5">距頂邊緣 (Y cm)</label>
+                  <div class="flex items-center bg-white border border-slate-300 rounded px-2 py-1">
+                    <input id="inputPosYCm" type="number" step="0.5" class="w-full text-right outline-none font-mono" />
+                    <span class="text-slate-400 text-[10px] ml-1">cm</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-1 space-y-1.5">
+                <div class="grid grid-cols-3 gap-1 text-xs">
+                  <div></div>
+                  <button id="btnNudgeUp" class="py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-center text-slate-700 font-bold">▲ 上移</button>
+                  <div></div>
+                  <button id="btnNudgeLeft" class="py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-center text-slate-700 font-bold">◀ 左移</button>
+                  <button id="btnCenterBoth" class="py-1 bg-sky-50 hover:bg-sky-100 border border-sky-300 rounded text-center text-sky-700 font-bold text-[11px]">置中</button>
+                  <button id="btnNudgeRight" class="py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-center text-slate-700 font-bold">右移 ▶</button>
+                  <div></div>
+                  <button id="btnNudgeDown" class="py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded text-center text-slate-700 font-bold">▼ 下移</button>
+                  <div></div>
+                </div>
+                <div class="flex gap-1 text-xs">
+                  <button id="btnAlignLeft" class="flex-1 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[11px] text-slate-600">靠左</button>
+                  <button id="btnAlignRight" class="flex-1 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[11px] text-slate-600">靠右</button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- 旋轉與透明度 -->
+            <div class="space-y-3 pt-1">
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-600">旋轉角度</span>
+                  <span id="rotationValDisplay" class="font-mono text-slate-700">0°</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input id="sliderRotate" type="range" min="0" max="360" value="0" class="flex-1 accent-sky-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer" />
+                  <button id="btnResetRotate" class="text-xs px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-600">歸零</button>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-600">透明度</span>
+                  <span id="opacityValDisplay" class="font-mono text-slate-700">100%</span>
+                </div>
+                <input id="sliderOpacity" type="range" min="10" max="100" value="100" class="w-full accent-sky-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer" />
+              </div>
+            </div>
+
+            <!-- 門板超出裁切工具 -->
+            <div id="doorOverflowBox" class="p-2.5 bg-amber-50 rounded-lg border border-amber-300 text-xs space-y-1.5 hidden shadow-2xs">
+              <div class="flex items-center justify-between text-amber-900 font-bold">
+                <span class="flex items-center gap-1">
+                  <span>⚠️ 超出門板邊界</span>
+                </span>
+                <span id="overflowTagText" class="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">待裁切</span>
+              </div>
+              <p class="text-[11px] text-amber-800 leading-tight">
+                此圖片部分懸空於門外。點擊下方按鈕可將超出門框的部分直接砍掉，使貼圖邊緣與門板完美切齊！
+              </p>
+              <button id="btnTrimSelectedToDoor" type="button" class="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs">
+                <span>✂️ 立即砍掉超出門板的部分</span>
+              </button>
+            </div>
+
+          </div>
+
+          <div id="noSelectionNotice" class="text-center py-8 text-slate-400 text-xs border border-dashed border-slate-200 rounded-lg">
+            請在門板上<strong>點選任一圖片</strong>或至圖片庫加入素材以編輯數值
+          </div>
+
+        </div>
+
+        <!-- Tab 2: 門板參數與輔助線 -->
+        <div id="tabContentDoor" class="space-y-4 hidden">
+          <div class="space-y-3">
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">門板標準參數</label>
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-500">實體門板寬度：</span>
+                <span class="font-mono font-bold text-slate-800">73.0 cm</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">實體門板高度：</span>
+                <span class="font-mono font-bold text-slate-800">197.0 cm</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">刻度尺位置：</span>
+                <span class="font-mono text-emerald-700 font-bold">外圍獨立區域 (零重疊)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 網格設定 -->
+          <div class="space-y-2">
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">背景網格 (Grid)</label>
+            <div class="grid grid-cols-3 gap-2 text-xs">
+              <button class="grid-btn py-1.5 border rounded border-slate-300 hover:bg-slate-100 text-center" data-grid="0">關閉</button>
+              <button class="grid-btn py-1.5 border rounded border-sky-500 bg-sky-50 text-sky-700 font-bold text-center" data-grid="5">5 cm</button>
+              <button class="grid-btn py-1.5 border rounded border-slate-300 hover:bg-slate-100 text-center" data-grid="10">10 cm</button>
+            </div>
+          </div>
+
+          <!-- 門板邊界裁切開關 (Clip out of bounds) -->
+          <div class="space-y-1.5 p-2.5 bg-amber-50/80 rounded-lg border border-amber-200 text-xs shadow-2xs">
+            <div class="flex items-center justify-between">
+              <label class="font-bold text-amber-900 flex items-center gap-1.5">
+                <span>✂️ 畫布即時裁切門外超出部分</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs text-amber-800 font-bold">
+                <input id="chkClipDoorBounds" type="checkbox" checked class="rounded text-amber-600 focus:ring-amber-500" />
+                啟用裁切
+              </label>
+            </div>
+            <p class="text-[11px] text-amber-700 leading-normal">
+              啟用後，畫布上超出門板邊界的圖片將直接被修剪隱藏，真實模擬貼在門上的貼齊效果！
+            </p>
+          </div>
+
+          <!-- 阻礙物開關 -->
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">門板固定阻礙物 & 標註</label>
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs text-sky-600 font-medium">
+                <input id="chkShowObstacles" type="checkbox" checked class="rounded text-sky-600 focus:ring-sky-500" />
+                顯示於畫布
+              </label>
+            </div>
+
+            <div class="space-y-2 text-xs">
+              <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                <div class="font-bold text-slate-800">上方圓孔</div>
+                <div class="text-[11px] text-slate-500">直徑 20.5 cm、居中、距頂 15.7 cm</div>
+              </div>
+              <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                <div class="font-bold text-slate-800">貓眼孔</div>
+                <div class="text-[11px] text-slate-500">直徑 3 cm、居中、圓孔下方 20 cm</div>
+              </div>
+              <div class="p-2.5 bg-slate-50 rounded border border-slate-200">
+                <div class="font-bold text-slate-800">門把 / 電子鎖區域</div>
+                <div class="text-[11px] text-slate-500">靠右側邊緣、高度 28 cm (距頂 79 cm、距底 90 cm)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 門板色調切換 -->
+          <div class="space-y-2">
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">門板材質底色</label>
+            <div class="flex gap-2">
+              <button class="door-color-btn flex-1 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-800 font-medium shadow-xs" data-color="#ffffff">純白</button>
+              <button class="door-color-btn flex-1 py-1.5 rounded border border-slate-300 text-xs bg-[#f4ebd9] text-amber-900 font-medium" data-color="#f4ebd9">原木色</button>
+              <button class="door-color-btn flex-1 py-1.5 rounded border border-slate-300 text-xs bg-[#e2e8f0] text-slate-700 font-medium" data-color="#e2e8f0">淺灰鋼</button>
+              <button class="door-color-btn flex-1 py-1.5 rounded border border-slate-300 text-xs bg-[#334155] text-white font-medium" data-color="#334155">鐵灰黑</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- 底部即時測量結果狀態欄 -->
+      <div id="rulerStatusBar" class="border-t border-slate-200 p-3 bg-slate-50 hidden">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            測量尺結果
+          </span>
+          <button id="btnClearMeasure" class="text-[11px] text-slate-500 hover:text-slate-800">清除測量線</button>
+        </div>
+        <div class="mt-2 text-sm font-mono font-bold text-sky-800 bg-white p-2 rounded border border-slate-200 flex items-center justify-between">
+          <span class="text-xs font-normal text-slate-500">實體距離：</span>
+          <span id="rulerLengthDisplay">0.0 cm</span>
+        </div>
+        <div class="mt-1 flex justify-between text-[11px] font-mono text-slate-500 px-1">
+          <span id="rulerDxDisplay">ΔX: 0.0 cm</span>
+          <span id="rulerDyDisplay">ΔY: 0.0 cm</span>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- 彈出視窗：尺寸清單匯出 (Modal) -->
+  <div id="listModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">📋</div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">素材輸出與印刷尺寸清單</h3>
+            <p class="text-xs text-slate-500">門板規格：寬 73.0 cm × 高 197.0 cm (精準裁切尺寸)</p>
+          </div>
+        </div>
+        <button id="btnCloseListModal" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6">
+        <div id="modalListEmpty" class="text-center py-8 text-slate-400 text-sm hidden">
+          尚未放置任何圖片素材，請先加入圖片。
+        </div>
+        <table id="modalListTable" class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[11px]">
+              <th class="py-2.5 px-3">序號</th>
+              <th class="py-2.5 px-3">預覽</th>
+              <th class="py-2.5 px-3">素材名稱</th>
+              <th class="py-2.5 px-3 text-right">建議實際輸出尺寸 (W × H)</th>
+              <th class="py-2.5 px-3 text-right">門板相對位置 (X, Y)</th>
+              <th class="py-2.5 px-3 text-right">旋轉</th>
+            </tr>
+          </thead>
+          <tbody id="modalListTbody" class="divide-y divide-slate-100 font-mono"></tbody>
+        </table>
+      </div>
+
+      <div class="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+        <span class="text-slate-500">※ 已自動扣除周圍透明空氣留白，為真實角色印刷建議尺寸</span>
+        <div class="flex gap-2">
+          <button id="btnCopyListText" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-medium transition">
+            複製文字清單
+          </button>
+          <button id="btnDownloadListCsv" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition shadow-xs">
+            下載 CSV 表格
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈出視窗：修改素材名稱 (Modal) -->
+  <div id="renameModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-4 space-y-3 animate-in fade-in zoom-in duration-150">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+          <span>✏️ 修改素材名稱</span>
+        </h4>
+        <button id="btnCloseRenameModal" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-xs text-slate-500 block">新素材顯示名稱</label>
+        <input id="renameInput" type="text" class="w-full text-xs p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 font-bold" />
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button id="btnCancelRename" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50">取消</button>
+        <button id="btnConfirmRename" class="px-3.5 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-bold hover:bg-sky-700 transition">確認儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈出視窗：影印店大圖輸出與拼版工坊 (Modal) -->
+  <div id="printImpositionModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 md:p-6 z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150 border border-slate-200">
+      
+      <!-- 頂部標題列 -->
+      <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              影印店大圖輸出與智能拼版工坊
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-200">省錢拼版神器</span>
+            </h3>
+            <p class="text-[11px] text-slate-500">自動將門板所有素材緊湊拼版在一大卷貼紙上，帶裁切線與標籤，自剪省下 60%~80% 費用！</p>
+          </div>
+        </div>
+        <button id="btnClosePrintModal" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition text-lg leading-none">✕</button>
+      </div>
+
+      <!-- 內容區 (左右兩欄) -->
+      <div class="flex-1 overflow-hidden flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200">
+        
+        <!-- 左欄：參數設定與省錢試算 (寬度 380px) -->
+        <div class="w-full md:w-96 p-4 overflow-y-auto space-y-3.5 shrink-0 bg-slate-50/70 text-xs">
+          
+          <!-- 1. 輸出模式選擇 -->
+          <div class="space-y-1.5">
+            <label class="font-bold text-slate-700 flex items-center justify-between">
+              <span>🎯 輸出方式選擇</span>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="cursor-pointer border-2 rounded-xl p-2.5 transition flex flex-col gap-1 bg-white has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50/50 shadow-2xs">
+                <div class="flex items-center gap-1.5 font-bold text-slate-800">
+                  <input type="radio" name="impositionMode" value="compact" checked class="text-amber-500 focus:ring-amber-400" />
+                  <span>智能緊湊拼版</span>
+                </div>
+                <span class="text-[10px] text-slate-500 leading-tight">圖案緊密排列在一大卷，帶裁切線自剪，最省錢！</span>
+              </label>
+
+              <label class="cursor-pointer border-2 rounded-xl p-2.5 transition flex flex-col gap-1 bg-white has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50/50 shadow-2xs">
+                <div class="flex items-center gap-1.5 font-bold text-slate-800">
+                  <input type="radio" name="impositionMode" value="fullDoor" class="text-sky-500 focus:ring-sky-400" />
+                  <span>門板 1:1 整版</span>
+                </div>
+                <span class="text-[10px] text-slate-500 leading-tight">整扇門 (73×197cm) 1:1 滿版輸出，直接貼滿整扇門。</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. 捲筒幅寬設定 (僅在拼版模式可用) -->
+          <div id="sectionRollWidth" class="space-y-1.5 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+            <label class="font-bold text-slate-700 block">📐 影印店捲筒幅寬 (寬度 cm)</label>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" class="btn-roll-width py-1.5 px-2 border rounded-lg font-bold text-center transition bg-amber-500 text-white border-amber-600" data-width="90">90 cm (3尺)</button>
+              <button type="button" class="btn-roll-width py-1.5 px-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 font-medium text-center transition" data-width="120">120 cm (4尺)</button>
+              <button type="button" class="btn-roll-width py-1.5 px-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 font-medium text-center transition" data-width="150">150 cm (5尺)</button>
+              <button type="button" class="btn-roll-width py-1.5 px-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 font-medium text-center transition" data-width="60">60 cm (A1寬)</button>
+              <div class="col-span-2 flex items-center gap-1">
+                <input id="inputCustomRollWidth" type="number" min="30" max="300" placeholder="自訂寬度" class="w-full py-1 px-2 border border-slate-200 rounded-lg text-xs" />
+                <span class="text-slate-400 shrink-0">cm</span>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400">※ 影印店大圖輸出以 90cm 與 120cm 捲筒最常見且最划算</p>
+          </div>
+
+          <!-- 3. 解析度與輔助線 -->
+          <div class="space-y-2 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+            <div class="flex items-center justify-between">
+              <label class="font-bold text-slate-700">🖨️ 輸出解析度 (DPI)</label>
+              <select id="selectDpi" class="text-xs py-1 px-2 border border-slate-200 rounded-md font-semibold text-slate-700 outline-none">
+                <option value="150" selected>150 DPI (大圖輸出業界標準，推薦)</option>
+                <option value="300">300 DPI (超高清精細印刷，檔案較大)</option>
+              </select>
+            </div>
+
+            <div class="space-y-1.5 pt-1.5 border-t border-slate-100">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input id="chkShowCropMarks" type="checkbox" checked class="rounded text-amber-500 focus:ring-amber-400" />
+                <span class="text-slate-700 font-medium">繪製裁切框線與十字定位標記 (方便剪裁)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input id="chkShowItemLabels" type="checkbox" checked class="rounded text-amber-500 focus:ring-amber-400" />
+                <span class="text-slate-700 font-medium">標註素材編號、名稱與實體輸出尺寸 (W×H cm)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input id="chkUprightItems" type="checkbox" checked class="rounded text-amber-500 focus:ring-amber-400" />
+                <span class="text-slate-700 font-medium">直立正面拼版 (方正易剪，省下更多空間)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-amber-900 bg-amber-50/80 p-2 rounded-lg border border-amber-300">
+                <input id="chkClipDoorOverflowPrint" type="checkbox" checked class="rounded text-amber-600 focus:ring-amber-500" />
+                <span>✂️ 自動刪除超出門板的圖案 (只印貼在門上的部分，切齊門框)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 4. 費用與才數試算 (最精華) -->
+          <div class="p-3 bg-gradient-to-br from-amber-50 to-orange-50/70 rounded-xl border border-amber-200/80 shadow-2xs space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-amber-900 text-xs flex items-center gap-1">
+                <span>💰 影印店費用與才數試算</span>
+              </span>
+              <span id="badgeCostSaving" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold">預估省 70%+</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 pt-0.5 font-mono text-[11px]">
+              <div class="bg-white/90 p-2 rounded-lg border border-amber-200/60">
+                <div class="text-[10px] text-slate-500 font-sans">實體輸出尺寸</div>
+                <div id="statOutputDim" class="font-bold text-slate-800">90.0 × 85.0 cm</div>
+              </div>
+              <div class="bg-white/90 p-2 rounded-lg border border-amber-200/60">
+                <div class="text-[10px] text-slate-500 font-sans">輸出像素解析度</div>
+                <div id="statPixelDim" class="font-bold text-slate-800">5315 × 5020 px</div>
+              </div>
+              <div class="bg-white/90 p-2 rounded-lg border border-amber-200/60">
+                <div class="text-[10px] text-slate-500 font-sans">大圖輸出計價才數</div>
+                <div id="statTotalCai" class="font-bold text-amber-700 text-sm">9 材</div>
+              </div>
+              <div class="bg-white/90 p-2 rounded-lg border border-amber-200/60">
+                <div class="text-[10px] text-slate-500 font-sans">拼版預估印費</div>
+                <div id="statEstimatedCost" class="font-bold text-emerald-700 text-sm">約 NT$ 180~270</div>
+              </div>
+            </div>
+
+            <!-- 對比說明 -->
+            <div class="p-2 bg-emerald-50/90 rounded-lg border border-emerald-200 text-[10px] text-emerald-900 leading-relaxed font-sans">
+              💡 <strong>為什麼拼版超省錢？</strong><br>
+              若分開獨立印 <span id="statLayerCount" class="font-bold">5</span> 張，每張通常有起印低消 ($100~$150/張)，分開印約需 <strong>NT$ 500~750+</strong>。<br>
+              拼在一卷印只需付 <strong><span id="statCaiSpan">9</span> 材</strong> 的費用，直接現省約 <strong><span id="statSavedAmount">NT$ 320 ~ 500</span></strong>！
+            </div>
+          </div>
+
+          <!-- 5. 影印店材質發包指引 -->
+          <div class="p-2.5 bg-blue-50/70 rounded-xl border border-blue-200 text-[11px] text-blue-900 space-y-1">
+            <div class="font-bold flex items-center gap-1 text-blue-800">
+              <span>🏷️ 推薦給影印店的發包指定材質：</span>
+            </div>
+            <p class="text-[10px] text-slate-600 leading-normal">
+              建議告訴影印店：<strong>「PVC 背膠貼紙 + 霧膜」</strong>（或珍珠畫布貼紙）。霧膜防刮耐磨、不反光、防潑水，且撕貼不易破，最適合貼在門板上！
+            </p>
+          </div>
+
+        </div>
+
+        <!-- 右欄：即時拼版視覺預覽區 -->
+        <div class="flex-1 bg-slate-100/70 p-4 flex flex-col overflow-hidden">
+          <div class="flex items-center justify-between pb-2 shrink-0 text-xs">
+            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+              <span>👁️ 輸出排版即時預覽</span>
+              <span class="text-[10px] text-slate-400 font-normal">（縮放自適應顯示，實際輸出為 1:1 高清晰度）</span>
+            </span>
+            <div class="flex items-center gap-2">
+              <span id="impositionStatusText" class="text-xs text-slate-600 font-semibold">共 0 個素材圖塊</span>
+            </div>
+          </div>
+
+          <!-- 預覽畫布視窗容器 -->
+          <div id="impositionPreviewContainer" class="flex-1 bg-slate-200/80 rounded-xl border border-slate-300 flex items-center justify-center p-3 overflow-hidden shadow-inner relative">
+            <canvas id="impositionPreviewCanvas" class="max-w-full max-h-full object-contain bg-white shadow-xl rounded"></canvas>
+            
+            <div id="impositionLoadingOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-2xs flex flex-col items-center justify-center gap-2 hidden z-10">
+              <div class="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+              <span class="text-xs font-bold text-slate-700">正在生成高解析大圖中...</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 底部動作列 -->
+      <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs shrink-0">
+        <div class="text-slate-500 flex items-center gap-2">
+          <span>※ 下載圖檔為 1:1 原尺寸高清晰點陣圖，可直接提供給影印店大圖輸出</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnCopyPrintSpec" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-medium transition shadow-2xs flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+            複製發包規格單
+          </button>
+          <button id="btnDownloadPrintImage" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold transition shadow-sm flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            📥 下載 1:1 影印店大圖輸出檔
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- 核心腳本 -->
+  <script>
+    /**
+     * 資料夾內現有圖片清單 (含既有素材與本機預設圖片)
+     */
+    const FOLDER_IMAGES = [
+      { id: 1, file: '圖片1.png', label: '仙度瑞拉 (公主)' },
+      { id: 2, file: '圖片2.png', label: '貝兒 (公主)' },
+      { id: 3, file: '圖片3.png', label: '長髮公主 (樂佩)' },
+      { id: 4, file: '圖片4.png', label: '白雪公主' },
+      { id: 5, file: '圖片5.png', label: '小美人魚 (愛麗兒)' },
+      { id: 6, file: '圖片6.png', label: '睡美人 (奧蘿拉)' },
+      { id: 7, file: '圖片7.png', label: '茉莉公主' },
+      { id: 8, file: '圖片8.png', label: '小木偶皮諾丘' },
+      { id: 9, file: '圖片9.png', label: '小飛象 Dumbo' },
+      { id: 10, file: '圖片10.png', label: '達菲與航海輪船' },
+      { id: 11, file: '圖片11.png', label: '米奇好朋友' },
+      { id: 12, file: '圖片12.png', label: '圖片素材 12' },
+      { id: 13, file: '圖片13.png', label: '圖片素材 13' },
+      { id: 14, file: 'hotel_door_diy_decor_sheet__1_-removebg-preview.png', label: '門板裝飾貼紙 Sheet' },
+      { id: 15, file: 'b8763769d00cd8991ae4adf70d168af7-removebg-preview.png', label: '迪士尼角色群' },
+      { id: 16, file: 'b8763769d00cd8991ae4adf70d168af7-removebg-preview (1).png', label: '迪士尼角色群 2' },
+      { id: 17, file: 'Gemini_Generated_Image_ac3viqac3viqac3v.jfif', label: 'Gemini 生成門板素材' },
+      { id: 18, file: '螢幕擷取畫面 2026-10-07 213123.png', label: '擷取參考畫面' }
+    ];
+
+    /**
+     * ==========================================
+     * 📐 一體化畫布幾何常數 (統一座標系，零重疊)
+     * ==========================================
+     */
+    const DOOR_REAL_WIDTH_CM = 73.0;   // 門板寬 73 cm
+    const DOOR_REAL_HEIGHT_CM = 197.0; // 門板高 197 cm
+
+    // 刻度尺與外圍留白邊界 (以 cm 為單位)
+    const RULER_LEFT_CM = 6.0;      // 左側 Y 軸標尺區寬度 (6 cm)
+    const RULER_TOP_CM = 6.0;       // 頂部 X 軸標尺區高度 (6 cm)
+    const RIGHT_DIM_CM = 14.0;      // 右側工程標註區寬度 (14 cm，放 79/28/90/197cm 雙箭頭)
+    const BOTTOM_MARGIN_CM = 6.0;   // 底部留白 (6 cm)
+
+    // 總畫布寬高 (cm)
+    const TOTAL_WIDTH_CM = RULER_LEFT_CM + DOOR_REAL_WIDTH_CM + RIGHT_DIM_CM;       // 6 + 73 + 14 = 93 cm
+    const TOTAL_HEIGHT_CM = RULER_TOP_CM + DOOR_REAL_HEIGHT_CM + BOTTOM_MARGIN_CM;  // 6 + 197 + 6 = 209 cm
+
+    // 比例尺：1 cm = 10 px
+    const PX_PER_CM = 10;
+    const CANVAS_PIXEL_WIDTH = Math.round(TOTAL_WIDTH_CM * PX_PER_CM);    // 930 px
+    const CANVAS_PIXEL_HEIGHT = Math.round(TOTAL_HEIGHT_CM * PX_PER_CM);  // 2090 px
+
+    // 門板左上角在畫布中的絕對像素起點
+    const DOOR_ORIGIN_X_PX = RULER_LEFT_CM * PX_PER_CM;  // 60 px
+    const DOOR_ORIGIN_Y_PX = RULER_TOP_CM * PX_PER_CM;   // 60 px
+    const DOOR_WIDTH_PX = DOOR_REAL_WIDTH_CM * PX_PER_CM;     // 730 px
+    const DOOR_HEIGHT_PX = DOOR_REAL_HEIGHT_CM * PX_PER_CM;   // 1970 px
+
+    // 常用紙張尺寸規格 (單位：cm)
+    const PAPER_PRESETS = {
+      a3: { label: 'A3', w: 29.7, h: 42.0 },
+      a4: { label: 'A4', w: 21.0, h: 29.7 },
+      a5: { label: 'A5', w: 14.8, h: 21.0 },
+      a6: { label: 'A6', w: 10.5, h: 14.8 },
+      b4: { label: 'B4', w: 25.7, h: 36.4 },
+      b5: { label: 'B5', w: 18.2, h: 25.7 },
+      sq15: { label: '方 15', w: 15.0, h: 15.0 },
+      sq20: { label: '方 20', w: 20.0, h: 20.0 }
+    };
+
+    // 全域狀態
+    const state = {
+      zoom: 1.0,
+      panX: 0,
+      panY: 0,
+      isPanning: false,
+      startPanX: 0,
+      startPanY: 0,
+
+      activeTool: 'select', // 'select' | 'ruler'
+      gridSizeCm: 5,
+      showObstacles: true,
+      doorBgColor: '#ffffff',
+      autoTrimWhitespace: true,
+      paperOrientation: 'portrait', // 'portrait' | 'landscape'
+      clipToDoorBounds: true, // 門板邊界自動裁切（超出門外的部分自動隱藏/切除）
+
+      layers: [], // { id, img, name, xCm, yCm, widthCm, heightCm, rotation, opacity, lockAspect, originalAspect }
+      selectedLayerId: null,
+
+      transformMode: null,
+      dragPointerId: null,
+      dragStartXCm: 0,
+      dragStartYCm: 0,
+      initialItemState: null,
+
+      measurePoints: null,
+      isMeasuring: false
+    };
+
+    // DOM 引用
+    const viewportContainer = document.getElementById('viewportContainer');
+    const panZoomLayer = document.getElementById('panZoomLayer');
+    const mainCanvas = document.getElementById('mainCanvas');
+    const ctx = mainCanvas.getContext('2d');
+
+    const zoomLevelDisplay = document.getElementById('zoomLevelDisplay');
+    const btnZoomIn = document.getElementById('btnZoomIn');
+    const btnZoomOut = document.getElementById('btnZoomOut');
+    const btnResetZoom = document.getElementById('btnResetZoom');
+    const btnFitScreen = document.getElementById('btnFitScreen');
+    const btnToolSelect = document.getElementById('btnToolSelect');
+    const btnToolRuler = document.getElementById('btnToolRuler');
+    const rulerGuideTag = document.getElementById('rulerGuideTag');
+    const rulerStatusBar = document.getElementById('rulerStatusBar');
+    const rulerLengthDisplay = document.getElementById('rulerLengthDisplay');
+    const rulerDxDisplay = document.getElementById('rulerDxDisplay');
+    const rulerDyDisplay = document.getElementById('rulerDyDisplay');
+    const btnClearMeasure = document.getElementById('btnClearMeasure');
+
+    const tabBtnGallery = document.getElementById('tabBtnGallery');
+    const tabBtnElement = document.getElementById('tabBtnElement');
+    const tabBtnDoor = document.getElementById('tabBtnDoor');
+    const tabContentGallery = document.getElementById('tabContentGallery');
+    const tabContentElement = document.getElementById('tabContentElement');
+    const tabContentDoor = document.getElementById('tabContentDoor');
+
+    const materialsGrid = document.getElementById('materialsGrid');
+    const materialCountBadge = document.getElementById('materialCountBadge');
+    const btnClearPresetMaterials = document.getElementById('btnClearPresetMaterials');
+    const btnRestorePresetMaterials = document.getElementById('btnRestorePresetMaterials');
+    const searchMaterialInput = document.getElementById('searchMaterialInput');
+    const filterMaterialSelect = document.getElementById('filterMaterialSelect');
+    const renameModal = document.getElementById('renameModal');
+    const renameInput = document.getElementById('renameInput');
+    const btnCloseRenameModal = document.getElementById('btnCloseRenameModal');
+    const btnCancelRename = document.getElementById('btnCancelRename');
+    const btnConfirmRename = document.getElementById('btnConfirmRename');
+
+    const serverStatusBadge = document.getElementById('serverStatusBadge');
+    const autoSaveIndicator = document.getElementById('autoSaveIndicator');
+    const autoSaveStatusText = document.getElementById('autoSaveStatusText');
+    const btnManualSave = document.getElementById('btnManualSave');
+    const btnResetCanvasState = document.getElementById('btnResetCanvasState');
+    const toastContainer = document.getElementById('toastContainer');
+    const chkAutoTrimWhitespace = document.getElementById('chkAutoTrimWhitespace');
+    const btnLoadAllFolderImages = document.getElementById('btnLoadAllFolderImages');
+    const btnClearAllCanvas = document.getElementById('btnClearAllCanvas');
+    const imageFileInput = document.getElementById('imageFileInput');
+
+    const layerListContainer = document.getElementById('layerListContainer');
+    const layerCountText = document.getElementById('layerCountText');
+    const selectionInspector = document.getElementById('selectionInspector');
+    const noSelectionNotice = document.getElementById('noSelectionNotice');
+    const selectedItemName = document.getElementById('selectedItemName');
+
+    const inputWidthCm = document.getElementById('inputWidthCm');
+    const inputHeightCm = document.getElementById('inputHeightCm');
+    const chkLockAspectRatio = document.getElementById('chkLockAspectRatio');
+    const btnResetOriginalAspect = document.getElementById('btnResetOriginalAspect');
+    const aspectRatioBadge = document.getElementById('aspectRatioBadge');
+    const btnPaperPortrait = document.getElementById('btnPaperPortrait');
+    const btnPaperLandscape = document.getElementById('btnPaperLandscape');
+    const inputPosXCm = document.getElementById('inputPosXCm');
+    const inputPosYCm = document.getElementById('inputPosYCm');
+
+    const btnNudgeUp = document.getElementById('btnNudgeUp');
+    const btnNudgeDown = document.getElementById('btnNudgeDown');
+    const btnNudgeLeft = document.getElementById('btnNudgeLeft');
+    const btnNudgeRight = document.getElementById('btnNudgeRight');
+    const btnCenterBoth = document.getElementById('btnCenterBoth');
+    const btnAlignLeft = document.getElementById('btnAlignLeft');
+    const btnAlignRight = document.getElementById('btnAlignRight');
+
+    const sliderRotate = document.getElementById('sliderRotate');
+    const rotationValDisplay = document.getElementById('rotationValDisplay');
+    const btnResetRotate = document.getElementById('btnResetRotate');
+    const sliderOpacity = document.getElementById('sliderOpacity');
+    const opacityValDisplay = document.getElementById('opacityValDisplay');
+    const layerRankBadge = document.getElementById('layerRankBadge');
+    const btnLayerBringToFront = document.getElementById('btnLayerBringToFront');
+    const btnLayerBringForward = document.getElementById('btnLayerBringForward');
+    const btnLayerSendBackward = document.getElementById('btnLayerSendBackward');
+    const btnLayerSendToBack = document.getElementById('btnLayerSendToBack');
+    const btnDeleteSelected = document.getElementById('btnDeleteSelected');
+
+    const chkShowObstacles = document.getElementById('chkShowObstacles');
+    const btnExportImage = document.getElementById('btnExportImage');
+    const btnExportList = document.getElementById('btnExportList');
+
+    const listModal = document.getElementById('listModal');
+    const btnCloseListModal = document.getElementById('btnCloseListModal');
+    const modalListTbody = document.getElementById('modalListTbody');
+    const modalListEmpty = document.getElementById('modalListEmpty');
+    const modalListTable = document.getElementById('modalListTable');
+    const btnCopyListText = document.getElementById('btnCopyListText');
+    const btnDownloadListCsv = document.getElementById('btnDownloadListCsv');
+
+    // 影印店大圖輸出與拼版工坊 DOM 元素
+    const btnOpenPrintImposition = document.getElementById('btnOpenPrintImposition');
+    const printImpositionModal = document.getElementById('printImpositionModal');
+    const btnClosePrintModal = document.getElementById('btnClosePrintModal');
+    const sectionRollWidth = document.getElementById('sectionRollWidth');
+    const inputCustomRollWidth = document.getElementById('inputCustomRollWidth');
+    const selectDpi = document.getElementById('selectDpi');
+    const chkShowCropMarks = document.getElementById('chkShowCropMarks');
+    const chkShowItemLabels = document.getElementById('chkShowItemLabels');
+    const chkUprightItems = document.getElementById('chkUprightItems');
+    const statOutputDim = document.getElementById('statOutputDim');
+    const statPixelDim = document.getElementById('statPixelDim');
+    const statTotalCai = document.getElementById('statTotalCai');
+    const statEstimatedCost = document.getElementById('statEstimatedCost');
+    const badgeCostSaving = document.getElementById('badgeCostSaving');
+    const statLayerCount = document.getElementById('statLayerCount');
+    const statCaiSpan = document.getElementById('statCaiSpan');
+    const statSavedAmount = document.getElementById('statSavedAmount');
+    const impositionStatusText = document.getElementById('impositionStatusText');
+    const impositionPreviewCanvas = document.getElementById('impositionPreviewCanvas');
+    const impositionLoadingOverlay = document.getElementById('impositionLoadingOverlay');
+    const btnCopyPrintSpec = document.getElementById('btnCopyPrintSpec');
+    const btnDownloadPrintImage = document.getElementById('btnDownloadPrintImage');
+    const chkClipDoorOverflowPrint = document.getElementById('chkClipDoorOverflowPrint');
+    const chkClipDoorBounds = document.getElementById('chkClipDoorBounds');
+    const doorOverflowBox = document.getElementById('doorOverflowBox');
+    const overflowTagText = document.getElementById('overflowTagText');
+    const btnTrimSelectedToDoor = document.getElementById('btnTrimSelectedToDoor');
+
+    /**
+     * 座標換算輔助
+     */
+    function doorCmToCanvasPx(doorXCm, doorYCm) {
+      return {
+        x: DOOR_ORIGIN_X_PX + doorXCm * PX_PER_CM,
+        y: DOOR_ORIGIN_Y_PX + doorYCm * PX_PER_CM
+      };
+    }
+
+    /**
+     * 自動裁切透明留白
+     */
+    function trimTransparentWhitespace(img) {
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = img.width;
+      offCanvas.height = img.height;
+      const offCtx = offCanvas.getContext('2d');
+      offCtx.drawImage(img, 0, 0);
+
+      let imgData;
+      try {
+        imgData = offCtx.getImageData(0, 0, img.width, img.height);
+      } catch (err) {
+        return { canvas: offCanvas, trimmed: false, cropW: img.width, cropH: img.height };
+      }
+
+      const data = imgData.data;
+      let minX = img.width, maxX = 0, minY = img.height, maxY = 0;
+      let hasVisiblePixel = false;
+
+      for (let y = 0; y < img.height; y++) {
+        for (let x = 0; x < img.width; x++) {
+          const a = data[(y * img.width + x) * 4 + 3];
+          if (a > 15) {
+            hasVisiblePixel = true;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (!hasVisiblePixel || (minX === 0 && minY === 0 && maxX === img.width - 1 && maxY === img.height - 1)) {
+        return { canvas: offCanvas, trimmed: false, cropW: img.width, cropH: img.height };
+      }
+
+      const cropW = maxX - minX + 1;
+      const cropH = maxY - minY + 1;
+      const trimmedCanvas = document.createElement('canvas');
+      trimmedCanvas.width = cropW;
+      trimmedCanvas.height = cropH;
+      const tCtx = trimmedCanvas.getContext('2d');
+      tCtx.drawImage(offCanvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+
+      return { canvas: trimmedCanvas, trimmed: true, cropW, cropH };
+    }
+
+    /**
+     * 初始化一體化畫布尺寸
+     */
+    function initCanvasDimensions() {
+      mainCanvas.width = CANVAS_PIXEL_WIDTH;
+      mainCanvas.height = CANVAS_PIXEL_HEIGHT;
+      mainCanvas.style.width = CANVAS_PIXEL_WIDTH + 'px';
+      mainCanvas.style.height = CANVAS_PIXEL_HEIGHT + 'px';
+    }
+
+    function getSelectedLayer() {
+      return state.layers.find(l => l.id === state.selectedLayerId) || null;
+    }
+
+    /**
+     * 繪製雙向工程尺寸箭頭引線
+     */
+    function drawDimArrow(x1, y1, x2, y2, label, textSide = 'right', isHorizontal = false) {
+      ctx.save();
+      ctx.strokeStyle = '#ef4444';
+      ctx.fillStyle = '#ef4444';
+      ctx.lineWidth = 1.2;
+
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      const s = 4.5;
+
+      if (!isHorizontal) {
+        ctx.beginPath();
+        ctx.moveTo(x1 - s, y1 + s); ctx.lineTo(x1, y1); ctx.lineTo(x1 + s, y1 + s);
+        ctx.moveTo(x2 - s, y2 - s); ctx.lineTo(x2, y2); ctx.lineTo(x2 + s, y2 - s);
+        ctx.stroke();
+
+        const midY = (y1 + y2) / 2;
+        ctx.font = 'bold 11px monospace';
+        const metrics = ctx.measureText(label);
+        const textX = textSide === 'right' ? x1 + 8 : x1 - metrics.width - 8;
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.fillRect(textX - 2, midY - 8, metrics.width + 4, 16);
+        ctx.fillStyle = '#b91c1c';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, textX, midY);
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(x1 + s, y1 - s); ctx.lineTo(x1, y1); ctx.lineTo(x1 + s, y1 + s);
+        ctx.moveTo(x2 - s, y2 - s); ctx.lineTo(x2, y2); ctx.lineTo(x2 - s, y2 + s);
+        ctx.stroke();
+
+        const midX = (x1 + x2) / 2;
+        ctx.font = 'bold 11px monospace';
+        const metrics = ctx.measureText(label);
+        const textY = textSide === 'top' ? y1 - 10 : y1 + 12;
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.fillRect(midX - metrics.width / 2 - 2, textY - 8, metrics.width + 4, 16);
+        ctx.fillStyle = '#b91c1c';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, midX, textY);
+      }
+      ctx.restore();
+    }
+
+    /**
+     * 繪製完整一體化畫布
+     * (包含：外圍方格紙底圖、外圍獨立標尺、中央白色門板、障礙物、貼圖素材、選中框與測量尺)
+     */
+    function renderMainCanvas() {
+      ctx.clearRect(0, 0, CANVAS_PIXEL_WIDTH, CANVAS_PIXEL_HEIGHT);
+
+      // ==========================================
+      // 1. 繪製外圍圖紙背景 (Drafting Board Background)
+      // ==========================================
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, CANVAS_PIXEL_WIDTH, CANVAS_PIXEL_HEIGHT);
+
+      // 繪製背景微淡方格
+      ctx.save();
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      const gridStep = 5 * PX_PER_CM; // 5cm
+      for (let x = 0; x <= CANVAS_PIXEL_WIDTH; x += gridStep) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_PIXEL_HEIGHT); ctx.stroke();
+      }
+      for (let y = 0; y <= CANVAS_PIXEL_HEIGHT; y += gridStep) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_PIXEL_WIDTH, y); ctx.stroke();
+      }
+      ctx.restore();
+
+      // ==========================================
+      // 2. 繪製中央白色門板 (73.0 × 197.0 cm)
+      // 門板位於中央，與外圍標尺完全獨立、零重疊
+      // ==========================================
+      ctx.save();
+      // 門板本體陰影與底色
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.12)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetX = 3;
+      ctx.shadowOffsetY = 6;
+      ctx.fillStyle = state.doorBgColor;
+      ctx.fillRect(DOOR_ORIGIN_X_PX, DOOR_ORIGIN_Y_PX, DOOR_WIDTH_PX, DOOR_HEIGHT_PX);
+      ctx.restore();
+
+      // 門板外邊框
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(DOOR_ORIGIN_X_PX, DOOR_ORIGIN_Y_PX, DOOR_WIDTH_PX, DOOR_HEIGHT_PX);
+
+      // 門板內部網格 (若開啟)
+      if (state.gridSizeCm > 0) {
+        ctx.save();
+        ctx.strokeStyle = state.doorBgColor === '#334155' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+        ctx.lineWidth = 1;
+        const doorStep = state.gridSizeCm * PX_PER_CM;
+        for (let x = DOOR_ORIGIN_X_PX + doorStep; x < DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX; x += doorStep) {
+          ctx.beginPath(); ctx.moveTo(x, DOOR_ORIGIN_Y_PX); ctx.lineTo(x, DOOR_ORIGIN_Y_PX + DOOR_HEIGHT_PX); ctx.stroke();
+        }
+        for (let y = DOOR_ORIGIN_Y_PX + doorStep; y < DOOR_ORIGIN_Y_PX + DOOR_HEIGHT_PX; y += doorStep) {
+          ctx.beginPath(); ctx.moveTo(DOOR_ORIGIN_X_PX, y); ctx.lineTo(DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX, y); ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 門板底部 Adventure Door 標誌文字
+      ctx.save();
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 28px "Comic Sans MS", "Arial Rounded MT Bold", sans-serif';
+      ctx.textAlign = 'center';
+      const doorCenterX = DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX / 2;
+      ctx.fillText('Adventure', doorCenterX, DOOR_ORIGIN_Y_PX + DOOR_HEIGHT_PX - 150);
+      ctx.fillText('Door', doorCenterX, DOOR_ORIGIN_Y_PX + DOOR_HEIGHT_PX - 110);
+      ctx.restore();
+
+      // ==========================================
+      // 3. 繪製外圍獨立標尺 (位於門板外面，絕對不重疊)
+      // ==========================================
+      ctx.save();
+      ctx.font = '10px "Inter", monospace';
+      ctx.fillStyle = '#475569';
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1;
+
+      // --- A. 頂部 X 軸刻度尺 (位於 Y: 15 ~ 55px，對齊門板 0 ~ 73 cm) ---
+      const rulerTopY = DOOR_ORIGIN_Y_PX - 8; // 刻度線對齊門板頂邊上方
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(DOOR_ORIGIN_X_PX, 16, DOOR_WIDTH_PX, 36);
+      ctx.strokeRect(DOOR_ORIGIN_X_PX, 16, DOOR_WIDTH_PX, 36);
+
+      for (let cm = 0; cm <= DOOR_REAL_WIDTH_CM; cm++) {
+        const x = DOOR_ORIGIN_X_PX + cm * PX_PER_CM;
+        let tickH = 6;
+        if (cm % 10 === 0) {
+          tickH = 16;
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 10px monospace';
+          ctx.fillText(`${cm}`, x - (cm < 10 ? 3 : 6), 34);
+        } else if (cm % 5 === 0) {
+          tickH = 10;
+        }
+        ctx.beginPath();
+        ctx.moveTo(x, 52);
+        ctx.lineTo(x, 52 - tickH);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#0284c7';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText('X (0~73 cm)', DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX - 70, 34);
+
+      // --- B. 左側 Y 軸刻度尺 (位於 X: 12 ~ 52px，對齊門板 0 ~ 197 cm) ---
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(14, DOOR_ORIGIN_Y_PX, 38, DOOR_HEIGHT_PX);
+      ctx.strokeRect(14, DOOR_ORIGIN_Y_PX, 38, DOOR_HEIGHT_PX);
+
+      for (let cm = 0; cm <= DOOR_REAL_HEIGHT_CM; cm++) {
+        const y = DOOR_ORIGIN_Y_PX + cm * PX_PER_CM;
+        let tickW = 6;
+        if (cm % 10 === 0) {
+          tickW = 16;
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 9px monospace';
+          ctx.fillText(`${cm}`, 18, y + 3);
+        } else if (cm % 5 === 0) {
+          tickW = 10;
+        }
+        ctx.beginPath();
+        ctx.moveTo(52, y);
+        ctx.lineTo(52 - tickW, y);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#0284c7';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText('Y(cm)', 18, DOOR_ORIGIN_Y_PX - 8);
+
+      // --- C. 頂部總寬度工程箭頭 (~73 cm) ---
+      drawDimArrow(DOOR_ORIGIN_X_PX, 8, DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX, 8, '~73 cm', 'top', true);
+
+      // --- D. 右側外圍總高與鎖具大箭頭 (對齊截圖) ---
+      const rightX1 = DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX + 25;
+      const rightX2 = DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX + 80;
+
+      const lockTopY = DOOR_ORIGIN_Y_PX + 79.0 * PX_PER_CM;
+      const lockBottomY = lockTopY + 28.0 * PX_PER_CM;
+      const doorBottomY = DOOR_ORIGIN_Y_PX + DOOR_HEIGHT_PX;
+
+      // 頂部到鎖頂 (~79 cm)
+      drawDimArrow(rightX1, DOOR_ORIGIN_Y_PX, rightX1, lockTopY, '~79 cm', 'right', false);
+      // 鎖底到底端 (~90 cm)
+      drawDimArrow(rightX1, lockBottomY, rightX1, doorBottomY, '~90 cm', 'right', false);
+      // 整扇門總高度 (~197 cm)
+      drawDimArrow(rightX2, DOOR_ORIGIN_Y_PX, rightX2, doorBottomY, '~197 cm', 'right', false);
+
+      ctx.restore();
+
+      // ==========================================
+      // 4. 繪製門板固定阻礙物 (圓孔、貓眼、鎖具把手)
+      // ==========================================
+      if (state.showObstacles) {
+        renderDoorObstacles();
+      }
+
+      // ==========================================
+      // 5. 繪製貼圖素材圖層 (若啟用門板邊界裁切，自動修剪超出門外的部分)
+      // ==========================================
+      ctx.save();
+      if (state.clipToDoorBounds) {
+        ctx.beginPath();
+        ctx.rect(DOOR_ORIGIN_X_PX, DOOR_ORIGIN_Y_PX, DOOR_WIDTH_PX, DOOR_HEIGHT_PX);
+        ctx.clip();
+      }
+      state.layers.forEach(layer => {
+        renderLayerItem(layer);
+      });
+      ctx.restore();
+
+      // ==========================================
+      // 6. 繪製選中框與變形手柄
+      // ==========================================
+      const selected = getSelectedLayer();
+      if (selected && state.activeTool === 'select') {
+        renderSelectionHandles(selected);
+      }
+
+      // ==========================================
+      // 7. 繪製測量尺
+      // ==========================================
+      if (state.measurePoints) {
+        renderMeasureRuler(state.measurePoints);
+      }
+    }
+
+    /**
+     * 繪製門上障礙物 (上方圓孔、貓眼、把手鎖)
+     */
+    function renderDoorObstacles() {
+      ctx.save();
+      const centerX = DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX / 2; // X = 36.5 cm
+
+      // --- 1. 上方圓孔：直徑 20.5 cm，距頂端 15.7 cm ---
+      const circleTopY = DOOR_ORIGIN_Y_PX + 15.7 * PX_PER_CM;
+      const circleDia = 20.5 * PX_PER_CM;
+      const circleRadius = circleDia / 2;
+      const circleCenterY = circleTopY + circleRadius;
+      const circleBottomY = circleTopY + circleDia;
+
+      ctx.fillStyle = 'rgba(100, 116, 139, 0.12)';
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+
+      ctx.beginPath();
+      ctx.arc(centerX, circleCenterY, circleRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#475569';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('圓孔 Ø 20.5 cm', centerX, circleCenterY + 4);
+
+      // --- 2. 貓眼孔：直徑 3 cm，距大圓孔下方約 20 cm ---
+      const peepholeTopY = circleBottomY + 20.0 * PX_PER_CM;
+      const peepholeRadius = 1.5 * PX_PER_CM;
+      const peepholeCenterY = peepholeTopY + peepholeRadius;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(71, 85, 105, 0.25)';
+      ctx.strokeStyle = '#334155';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(centerX, peepholeCenterY, peepholeRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#334155';
+      ctx.font = '11px sans-serif';
+      ctx.fillText('貓眼 Ø 3cm', centerX, peepholeCenterY + 20);
+      ctx.restore();
+
+      // --- 3. 門把 / 電子鎖區域 (靠右側邊緣，高度 28 cm，距頂 79 cm) ---
+      const lockTopY = DOOR_ORIGIN_Y_PX + 79.0 * PX_PER_CM;
+      const lockHeight = 28.0 * PX_PER_CM;
+      const lockBottomY = lockTopY + lockHeight;
+      const lockWidth = 12.0 * PX_PER_CM;
+      const lockLeftX = DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX - lockWidth;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(100, 116, 139, 0.08)';
+      ctx.strokeStyle = '#64748b';
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(lockLeftX, lockTopY, lockWidth, lockHeight);
+      ctx.fillRect(lockLeftX, lockTopY, lockWidth, lockHeight);
+
+      ctx.setLineDash([]);
+      // 電子鎖面板
+      const panelW = 8.0 * PX_PER_CM;
+      const panelH = 6.0 * PX_PER_CM;
+      const panelX = DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX - panelW - 2.0 * PX_PER_CM;
+      const panelY = lockTopY + 2.5 * PX_PER_CM;
+      ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+      // 把手
+      const handleY = lockTopY + 14.0 * PX_PER_CM;
+      ctx.beginPath();
+      ctx.arc(DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX - 4.5 * PX_PER_CM, handleY, 2.2 * PX_PER_CM, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX - 10.5 * PX_PER_CM, handleY - 1.0 * PX_PER_CM, 6.0 * PX_PER_CM, 2.0 * PX_PER_CM);
+      ctx.stroke();
+
+      // 旋鈕
+      const knobY = lockTopY + 22.5 * PX_PER_CM;
+      ctx.beginPath();
+      ctx.arc(DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX - 4.5 * PX_PER_CM, knobY, 1.8 * PX_PER_CM, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#475569';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('鎖具/把手 (28 cm)', DOOR_ORIGIN_X_PX + DOOR_WIDTH_PX - 14, lockTopY - 8);
+      ctx.restore();
+
+      // ==========================================
+      // 📐 門板內部工程標註箭頭 (100% 吻合原圖)
+      // ==========================================
+      // 頂部至圓孔頂端：~15.7 cm
+      drawDimArrow(centerX, DOOR_ORIGIN_Y_PX, centerX, circleTopY, '~15.7 cm', 'right', false);
+
+      // 圓孔直徑右側標註：20.5 cm
+      const circleDimX = centerX + circleRadius + 14;
+      drawDimArrow(circleDimX, circleTopY, circleDimX, circleBottomY, '20.5 cm', 'right', false);
+
+      // 圓孔下緣至貓眼：~20 cm
+      drawDimArrow(centerX, circleBottomY, centerX, peepholeTopY, '~20 cm', 'right', false);
+
+      // 鎖具高度：~28 cm
+      const lockDimX = lockLeftX - 16;
+      drawDimArrow(lockDimX, lockTopY, lockDimX, lockBottomY, '~28 cm', 'left', false);
+
+      ctx.restore();
+    }
+
+    /**
+     * 繪製單張圖層素材
+     */
+    function renderLayerItem(layer) {
+      ctx.save();
+      const pos = doorCmToCanvasPx(layer.xCm, layer.yCm);
+      const w = layer.widthCm * PX_PER_CM;
+      const h = layer.heightCm * PX_PER_CM;
+
+      ctx.translate(pos.x + w / 2, pos.y + h / 2);
+      ctx.rotate((layer.rotation * Math.PI) / 180);
+      ctx.globalAlpha = layer.opacity;
+
+      ctx.drawImage(layer.img, -w / 2, -h / 2, w, h);
+      ctx.restore();
+    }
+
+    /**
+     * 繪製選中框與控制手柄
+     */
+    function renderSelectionHandles(layer) {
+      ctx.save();
+      const pos = doorCmToCanvasPx(layer.xCm, layer.yCm);
+      const w = layer.widthCm * PX_PER_CM;
+      const h = layer.heightCm * PX_PER_CM;
+
+      ctx.translate(pos.x + w / 2, pos.y + h / 2);
+      ctx.rotate((layer.rotation * Math.PI) / 180);
+
+      // 選取藍框
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-w / 2, -h / 2, w, h);
+
+      // 四角手柄
+      const handleSize = 12;
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 2;
+
+      const corners = [
+        { x: -w / 2, y: -h / 2 },
+        { x: w / 2, y: -h / 2 },
+        { x: w / 2, y: h / 2 },
+        { x: -w / 2, y: h / 2 }
+      ];
+
+      corners.forEach(c => {
+        ctx.fillRect(c.x - handleSize / 2, c.y - handleSize / 2, handleSize, handleSize);
+        ctx.strokeRect(c.x - handleSize / 2, c.y - handleSize / 2, handleSize, handleSize);
+      });
+
+      // 旋轉柄
+      const rotateOffset = 24;
+      ctx.beginPath();
+      ctx.moveTo(0, -h / 2);
+      ctx.lineTo(0, -h / 2 - rotateOffset);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, -h / 2 - rotateOffset, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#0284c7';
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+
+      // 浮動尺寸標籤
+      ctx.save();
+      const ov = checkLayerOverflow(layer);
+      let infoText = `${layer.widthCm.toFixed(1)} × ${layer.heightCm.toFixed(1)} cm`;
+      if (ov.overflows) infoText += ' (✂️ 門外將裁切)';
+      ctx.font = 'bold 11px monospace';
+      const textMetrics = ctx.measureText(infoText);
+      const badgeW = textMetrics.width + 16;
+      const badgeH = 22;
+      const badgeX = pos.x + w / 2 - badgeW / 2;
+      const badgeY = Math.max(10, pos.y - badgeH - 8);
+
+      ctx.fillStyle = ov.overflows ? 'rgba(180, 83, 9, 0.95)' : 'rgba(15, 23, 42, 0.88)';
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+      ctx.fill();
+
+      ctx.fillStyle = ov.overflows ? '#fef08a' : '#38bdf8';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(infoText, badgeX + badgeW / 2, badgeY + badgeH / 2);
+      ctx.restore();
+    }
+
+    /**
+     * 繪製測量尺
+     */
+    function renderMeasureRuler(pts) {
+      ctx.save();
+      const pos1 = doorCmToCanvasPx(pts.x1, pts.y1);
+      const pos2 = doorCmToCanvasPx(pts.x2, pts.y2);
+
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(pos1.x, pos1.y);
+      ctx.lineTo(pos2.x, pos2.y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.arc(pos1.x, pos1.y, 5, 0, Math.PI * 2);
+      ctx.arc(pos2.x, pos2.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      const dxCm = Math.abs(pts.x2 - pts.x1);
+      const dyCm = Math.abs(pts.y2 - pts.y1);
+      const distCm = Math.sqrt(dxCm * dxCm + dyCm * dyCm);
+
+      const midX = (pos1.x + pos2.x) / 2;
+      const midY = (pos1.y + pos2.y) / 2;
+      const label = `${distCm.toFixed(1)} cm`;
+
+      ctx.font = 'bold 12px monospace';
+      const textMetrics = ctx.measureText(label);
+      const bgW = textMetrics.width + 14;
+      const bgH = 22;
+
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.roundRect(midX - bgW / 2, midY - bgH / 2, bgW, bgH, 4);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, midX, midY);
+
+      ctx.restore();
+    }
+
+    function renderAll() {
+      renderMainCanvas();
+    }
+
+    function updateViewportTransform() {
+      panZoomLayer.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+      zoomLevelDisplay.textContent = `${Math.round(state.zoom * 100)}%`;
+    }
+
+    function fitToScreen() {
+      const containerRect = viewportContainer.getBoundingClientRect();
+      const scaleX = (containerRect.width - 30) / CANVAS_PIXEL_WIDTH;
+      const scaleY = (containerRect.height - 30) / CANVAS_PIXEL_HEIGHT;
+      const optimalZoom = Math.min(scaleX, scaleY, 1.2);
+
+      state.zoom = Math.max(0.15, Math.min(optimalZoom, 3.0));
+      state.panX = Math.round((containerRect.width - CANVAS_PIXEL_WIDTH * state.zoom) / 2);
+      state.panY = Math.round((containerRect.height - CANVAS_PIXEL_HEIGHT * state.zoom) / 2);
+
+      updateViewportTransform();
+    }
+
+    function setZoom(newZoom, mouseX = null, mouseY = null) {
+      newZoom = Math.max(0.15, Math.min(newZoom, 4.0));
+      if (Math.abs(newZoom - state.zoom) < 0.001) return;
+
+      const containerRect = viewportContainer.getBoundingClientRect();
+      const anchorX = mouseX !== null ? mouseX : containerRect.width / 2;
+      const anchorY = mouseY !== null ? mouseY : containerRect.height / 2;
+
+      const worldX = (anchorX - state.panX) / state.zoom;
+      const worldY = (anchorY - state.panY) / state.zoom;
+
+      state.zoom = newZoom;
+      state.panX = anchorX - worldX * state.zoom;
+      state.panY = anchorY - worldY * state.zoom;
+
+      updateViewportTransform();
+    }
+
+    /**
+     * 精確座標轉換：MouseEvent -> 門板內部公分座標 (cm)
+     * (已自動扣除外圍獨立標尺區域，門板左上角即為 0, 0)
+     */
+    function getDoorCoordsFromEvent(e) {
+      const rect = mainCanvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return { doorXCm: 0, doorYCm: 0, rawCanvasXCm: 0, rawCanvasYCm: 0 };
+
+      // 畫布內部像素座標
+      const canvasPxX = (e.clientX - rect.left) * (CANVAS_PIXEL_WIDTH / rect.width);
+      const canvasPxY = (e.clientY - rect.top) * (CANVAS_PIXEL_HEIGHT / rect.height);
+
+      // 換算為公分
+      const rawCanvasXCm = canvasPxX / PX_PER_CM;
+      const rawCanvasYCm = canvasPxY / PX_PER_CM;
+
+      // 扣除外圍尺規偏移 -> 門板內部座標 (cm)
+      const doorXCm = rawCanvasXCm - RULER_LEFT_CM;
+      const doorYCm = rawCanvasYCm - RULER_TOP_CM;
+
+      return {
+        doorXCm: Number(doorXCm.toFixed(1)),
+        doorYCm: Number(doorYCm.toFixed(1)),
+        rawCanvasXCm,
+        rawCanvasYCm
+      };
+    }
+
+    /**
+     * 幾何碰撞檢測
+     */
+    function hitTestLayer(layer, doorXCm, doorYCm, isSelected = false) {
+      const rad = (-layer.rotation * Math.PI) / 180;
+      const cx = layer.xCm + layer.widthCm / 2;
+      const cy = layer.yCm + layer.heightCm / 2;
+
+      const dx = doorXCm - cx;
+      const dy = doorYCm - cy;
+      const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
+      const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
+
+      const hw = layer.widthCm / 2;
+      const hh = layer.heightCm / 2;
+
+      if (isSelected) {
+        const handleHitRadius = Math.max(1.8, 16 / PX_PER_CM);
+        const rotateHandleOffsetCm = 24 / PX_PER_CM;
+
+        if (Math.hypot(localX - 0, localY - (-hh - rotateHandleOffsetCm)) <= handleHitRadius) {
+          return 'rotate';
+        }
+
+        if (Math.hypot(localX - (-hw), localY - (-hh)) <= handleHitRadius) return 'nw';
+        if (Math.hypot(localX - hw, localY - (-hh)) <= handleHitRadius) return 'ne';
+        if (Math.hypot(localX - hw, localY - hh) <= handleHitRadius) return 'se';
+        if (Math.hypot(localX - (-hw), localY - hh) <= handleHitRadius) return 'sw';
+      }
+
+      const pad = 0.5;
+      if (localX >= -(hw + pad) && localX <= (hw + pad) &&
+          localY >= -(hh + pad) && localY <= (hh + pad)) {
+        return 'move';
+      }
+
+      return null;
+    }
+
+    /**
+     * 新增圖片到門板
+     */
+    function addImageLayer(img, fileName = '素材圖片', customX = null, customY = null) {
+      let finalImg = img;
+      if (state.autoTrimWhitespace) {
+        const result = trimTransparentWhitespace(img);
+        if (result.trimmed) {
+          finalImg = result.canvas;
+        }
+      }
+
+      const originalAspect = (finalImg.width && finalImg.height) ? (finalImg.width / finalImg.height) : 1.0;
+      
+      let initialW = 24.0;
+      let initialH = Number((initialW / originalAspect).toFixed(1));
+
+      if (initialH > 45) {
+        initialH = 45.0;
+        initialW = Number((initialH * originalAspect).toFixed(1));
+      }
+
+      let initialX = customX !== null ? customX : Math.max(1.0, (DOOR_REAL_WIDTH_CM - initialW) / 2);
+      let initialY = customY !== null ? customY : 60.0;
+
+      if (state.layers.length > 0 && customX === null && customY === null) {
+        const offset = (state.layers.length % 5) * 4.0;
+        initialX = Math.min(DOOR_REAL_WIDTH_CM - initialW, initialX + (state.layers.length % 2 === 0 ? offset : -offset));
+        initialY = Math.min(DOOR_REAL_HEIGHT_CM - initialH, initialY + offset);
+      }
+
+      let displayName = '素材圖片';
+      if (fileName && typeof fileName === 'string') {
+        displayName = fileName.replace(/\.[^/.]+$/, "");
+      }
+
+      let layerDataUrl = '';
+      if (finalImg instanceof HTMLCanvasElement) {
+        layerDataUrl = finalImg.toDataURL('image/png');
+      } else if (finalImg instanceof HTMLImageElement) {
+        layerDataUrl = finalImg.src;
+      }
+
+      const newLayer = {
+        id: 'layer_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        img: finalImg,
+        dataUrl: layerDataUrl,
+        name: displayName || '素材圖片',
+        xCm: Number(initialX.toFixed(1)),
+        yCm: Number(initialY.toFixed(1)),
+        widthCm: Number(initialW.toFixed(1)),
+        heightCm: Number(initialH.toFixed(1)),
+        rotation: 0,
+        opacity: 1.0,
+        lockAspect: true,
+        originalAspect: originalAspect
+      };
+
+      state.layers.push(newLayer);
+      selectLayer(newLayer.id);
+      renderAll();
+      updateLayerListUI();
+      if (typeof autoSaveStateDebounced === 'function') autoSaveStateDebounced();
+    }
+
+    function selectLayer(id) {
+      state.selectedLayerId = id;
+      updateInspectorUI();
+      updateLayerListUI();
+      renderAll();
+    }
+
+    /**
+     * 圖層順序操作
+     */
+    function moveLayerTop(layerId) {
+      const idx = state.layers.findIndex(l => l.id === layerId);
+      if (idx === -1 || idx === state.layers.length - 1) return;
+      const [item] = state.layers.splice(idx, 1);
+      state.layers.push(item);
+      state.selectedLayerId = layerId;
+      updateLayerListUI();
+      updateInspectorUI();
+      renderAll();
+      if (typeof autoSaveStateDebounced === 'function') autoSaveStateDebounced();
+    }
+
+    function moveLayerUp(layerId) {
+      const idx = state.layers.findIndex(l => l.id === layerId);
+      if (idx === -1 || idx === state.layers.length - 1) return;
+      const temp = state.layers[idx];
+      state.layers[idx] = state.layers[idx + 1];
+      state.layers[idx + 1] = temp;
+      state.selectedLayerId = layerId;
+      updateLayerListUI();
+      updateInspectorUI();
+      renderAll();
+      if (typeof autoSaveStateDebounced === 'function') autoSaveStateDebounced();
+    }
+
+    function moveLayerDown(layerId) {
+      const idx = state.layers.findIndex(l => l.id === layerId);
+      if (idx === -1 || idx === 0) return;
+      const temp = state.layers[idx];
+      state.layers[idx] = state.layers[idx - 1];
+      state.layers[idx - 1] = temp;
+      state.selectedLayerId = layerId;
+      updateLayerListUI();
+      updateInspectorUI();
+      renderAll();
+      if (typeof autoSaveStateDebounced === 'function') autoSaveStateDebounced();
+    }
+
+    function moveLayerBottom(layerId) {
+      const idx = state.layers.findIndex(l => l.id === layerId);
+      if (idx === -1 || idx === 0) return;
+      const [item] = state.layers.splice(idx, 1);
+      state.layers.unshift(item);
+      state.selectedLayerId = layerId;
+      updateLayerListUI();
+      updateInspectorUI();
+      renderAll();
+      if (typeof autoSaveStateDebounced === 'function') autoSaveStateDebounced();
+    }
+
+    function updateInspectorUI() {
+      const layer = getSelectedLayer();
+      if (!layer) {
+        selectionInspector.classList.add('hidden');
+        noSelectionNotice.classList.remove('hidden');
+        return;
+      }
+
+      selectionInspector.classList.remove('hidden');
+      noSelectionNotice.classList.add('hidden');
+
+      selectedItemName.textContent = layer.name;
+      inputWidthCm.value = layer.widthCm.toFixed(1);
+      inputHeightCm.value = layer.heightCm.toFixed(1);
+      inputPosXCm.value = layer.xCm.toFixed(1);
+      inputPosYCm.value = layer.yCm.toFixed(1);
+      chkLockAspectRatio.checked = layer.lockAspect;
+      aspectRatioBadge.textContent = layer.lockAspect ? '鎖定比例' : '自由比例';
+
+      sliderRotate.value = layer.rotation;
+      rotationValDisplay.textContent = `${Math.round(layer.rotation)}°`;
+
+      sliderOpacity.value = Math.round(layer.opacity * 100);
+      opacityValDisplay.textContent = `${Math.round(layer.opacity * 100)}%`;
+
+      // 更新圖層順序 Badge 與按鈕狀態
+      const curIdx = state.layers.findIndex(l => l.id === layer.id);
+      const totalLayers = state.layers.length;
+      if (curIdx !== -1 && layerRankBadge) {
+        let tag = '';
+        if (totalLayers === 1) tag = ' (唯一圖層)';
+        else if (curIdx === totalLayers - 1) tag = ' (最頂層 🌟)';
+        else if (curIdx === 0) tag = ' (最底層 🔲)';
+        else tag = ' (中間層)';
+        layerRankBadge.textContent = `第 ${curIdx + 1} / ${totalLayers} 層${tag}`;
+
+        const isTop = curIdx === totalLayers - 1;
+        const isBottom = curIdx === 0;
+
+        btnLayerBringToFront.disabled = isTop;
+        btnLayerBringForward.disabled = isTop;
+        btnLayerSendBackward.disabled = isBottom;
+        btnLayerSendToBack.disabled = isBottom;
+
+        btnLayerBringToFront.classList.toggle('opacity-30', isTop);
+        btnLayerBringToFront.classList.toggle('cursor-not-allowed', isTop);
+        btnLayerBringForward.classList.toggle('opacity-30', isTop);
+        btnLayerBringForward.classList.toggle('cursor-not-allowed', isTop);
+
+        btnLayerSendBackward.classList.toggle('opacity-30', isBottom);
+        btnLayerSendBackward.classList.toggle('cursor-not-allowed', isBottom);
+        btnLayerSendToBack.classList.toggle('opacity-30', isBottom);
+        btnLayerSendToBack.classList.toggle('cursor-not-allowed', isBottom);
+      }
+
+      // 檢查是否超出門板邊界
+      if (doorOverflowBox) {
+        const ov = checkLayerOverflow(layer);
+        if (ov.overflows) {
+          doorOverflowBox.classList.remove('hidden');
+          const edges = [];
+          if (ov.left) edges.push('左側');
+          if (ov.right) edges.push('右側');
+          if (ov.top) edges.push('頂部');
+          if (ov.bottom) edges.push('底部');
+          if (overflowTagText) overflowTagText.textContent = `超出${edges.join('/')}`;
+        } else {
+          doorOverflowBox.classList.add('hidden');
+        }
+      }
+    }
+
+    function updateLayerListUI() {
+      layerCountText.textContent = state.layers.length;
+
+      if (state.layers.length === 0) {
+        layerListContainer.innerHTML = '<div class="text-xs text-slate-400 text-center py-4">畫布上尚無任何圖片</div>';
+        return;
+      }
+
+      layerListContainer.innerHTML = '';
+      const total = state.layers.length;
+
+      // 依顯示順序：最上層排在最上方 (由上至下 = 由頂至底)
+      [...state.layers].reverse().forEach(layer => {
+        const idx = state.layers.findIndex(l => l.id === layer.id);
+        const isSelected = layer.id === state.selectedLayerId;
+        const canMoveUp = idx < total - 1;
+        const canMoveDown = idx > 0;
+
+        const itemEl = document.createElement('div');
+        itemEl.className = `flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer transition select-none group ${
+          isSelected
+            ? 'bg-sky-100/90 text-sky-950 font-semibold border border-sky-300 shadow-2xs'
+            : 'bg-white hover:bg-slate-50 border border-slate-200 text-slate-700'
+        }`;
+
+        const imgSrc = (layer.img instanceof HTMLCanvasElement) ? layer.img.toDataURL() : layer.img.src;
+
+        itemEl.innerHTML = `
+          <div class="flex items-center gap-2 truncate flex-1 min-w-0 mr-1.5">
+            <span class="w-4 h-4 rounded text-[9px] font-mono flex items-center justify-center font-bold ${
+              isSelected ? 'bg-sky-200 text-sky-800' : 'bg-slate-100 text-slate-500'
+            } shrink-0" title="圖層層級 (第 ${idx + 1} 層，越大越靠前)">#${idx + 1}</span>
+            <img src="${imgSrc}" class="w-7 h-7 object-contain rounded shrink-0 border border-slate-200 bg-white" />
+            <div class="truncate">
+              <div class="truncate font-semibold leading-tight text-slate-800">${layer.name}</div>
+              <div class="font-mono text-[9px] text-slate-400 leading-tight mt-0.5">${layer.widthCm.toFixed(1)} × ${layer.heightCm.toFixed(1)} cm</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-0.5 shrink-0">
+            <button class="btn-item-up p-1 rounded hover:bg-sky-200/70 ${
+              canMoveUp ? 'text-slate-600 hover:text-sky-800' : 'text-slate-300 cursor-not-allowed'
+            } transition" title="${canMoveUp ? '向上一層 (向前疊一層)' : '已在最頂層'}" ${canMoveUp ? '' : 'disabled'}>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"/></svg>
+            </button>
+            <button class="btn-item-down p-1 rounded hover:bg-sky-200/70 ${
+              canMoveDown ? 'text-slate-600 hover:text-sky-800' : 'text-slate-300 cursor-not-allowed'
+            } transition" title="${canMoveDown ? '向下一層 (向後疊一層)' : '已在最底層'}" ${canMoveDown ? '' : 'disabled'}>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <button class="btn-item-del p-1 rounded hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition ml-0.5" title="刪除素材">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        `;
+
+        itemEl.querySelector('.btn-item-up')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          moveLayerUp(layer.id);
+        });
+
+        itemEl.querySelector('.btn-item-down')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          moveLayerDown(layer.id);
+        });
+
+        itemEl.querySelector('.btn-item-del')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.selectedLayerId = layer.id;
+          deleteSelectedLayer();
+        });
+
+        itemEl.addEventListener('click', () => {
+          selectLayer(layer.id);
+          switchTab('tabBtnElement', 'tabContentElement');
+        });
+
+        layerListContainer.appendChild(itemEl);
+      });
+    }
+
+    /**
+     * ==========================================
+     * 🔔 提示訊息通知系統 (Toast)
+     * ==========================================
+     */
+    function showToast(message, type = 'success') {
+      if (!toastContainer) return;
+      const toast = document.createElement('div');
+      const bg = type === 'error' ? 'bg-rose-600' : (type === 'info' ? 'bg-slate-800' : 'bg-emerald-600');
+      toast.className = `${bg} text-white px-3.5 py-2 rounded-lg shadow-xl text-xs font-semibold flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-200 pointer-events-auto border border-white/20`;
+      toast.innerHTML = `<span>${type === 'error' ? '❌' : (type === 'info' ? 'ℹ️' : '✅')}</span><span>${message}</span>`;
+      toastContainer.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 250);
+      }, 2800);
+    }
+
+    /**
+     * ==========================================
+     * 💾 本機資料庫 (IndexedDB) - 永久儲存素材清單與進度
+     * ==========================================
+     */
+    const DB_NAME = 'DoorSimulatorDB_v2';
+    const DB_VERSION = 1;
+    let dbInstance = null;
+
+    function initDB() {
+      return new Promise((resolve) => {
+        if (!window.indexedDB) {
+          console.warn('瀏覽器不支援 IndexedDB');
+          resolve(null);
+          return;
+        }
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('materials_library')) {
+            db.createObjectStore('materials_library', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('canvas_state')) {
+            db.createObjectStore('canvas_state', { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = (e) => {
+          dbInstance = e.target.result;
+          resolve(dbInstance);
+        };
+        req.onerror = (e) => {
+          console.warn('IndexedDB 開啟失敗:', e);
+          resolve(null);
+        };
+      });
+    }
+
+    function dbSaveMaterial(mat) {
+      return new Promise((resolve) => {
+        if (!dbInstance) { resolve(false); return; }
+        try {
+          const tx = dbInstance.transaction('materials_library', 'readwrite');
+          const store = tx.objectStore('materials_library');
+          store.put(mat);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (_) { resolve(false); }
+      });
+    }
+
+    function dbGetMaterials() {
+      return new Promise((resolve) => {
+        if (!dbInstance) { resolve([]); return; }
+        try {
+          const tx = dbInstance.transaction('materials_library', 'readonly');
+          const store = tx.objectStore('materials_library');
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } catch (_) { resolve([]); }
+      });
+    }
+
+    function dbDeleteMaterial(id) {
+      return new Promise((resolve) => {
+        if (!dbInstance) { resolve(false); return; }
+        try {
+          const tx = dbInstance.transaction('materials_library', 'readwrite');
+          const store = tx.objectStore('materials_library');
+          store.delete(id);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (_) { resolve(false); }
+      });
+    }
+
+    function dbSaveCanvasState(stateData) {
+      return new Promise((resolve) => {
+        if (!dbInstance) { resolve(false); return; }
+        try {
+          const tx = dbInstance.transaction('canvas_state', 'readwrite');
+          const store = tx.objectStore('canvas_state');
+          store.put(stateData);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (_) { resolve(false); }
+      });
+    }
+
+    function dbGetCanvasState() {
+      return new Promise((resolve) => {
+        if (!dbInstance) { resolve(null); return; }
+        try {
+          const tx = dbInstance.transaction('canvas_state', 'readonly');
+          const store = tx.objectStore('canvas_state');
+          const req = store.get('current_state');
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch (_) { resolve(null); }
+      });
+    }
+
+    function dbClearCanvasState() {
+      return new Promise((resolve) => {
+        if (!dbInstance) { resolve(false); return; }
+        try {
+          const tx = dbInstance.transaction('canvas_state', 'readwrite');
+          const store = tx.objectStore('canvas_state');
+          store.delete('current_state');
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (_) { resolve(false); }
+      });
+    }
+
+    /**
+     * ==========================================
+     * 🌐 本機伺服器連線與雙向同步
+     * ==========================================
+     */
+    let serverBaseUrl = '';
+    let isServerOnline = false;
+
+    async function checkServerConnection() {
+      const candidates = [];
+      if (window.location.protocol.startsWith('http')) {
+        candidates.push(window.location.origin);
+      }
+      candidates.push('http://127.0.0.1:8000', 'http://localhost:8000');
+
+      for (const host of candidates) {
+        try {
+          const res = await fetch(`${host}/api/status`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(1200)
+          });
+          if (res.ok) {
+            const data = await res.json();
+            serverBaseUrl = host;
+            isServerOnline = true;
+            updateServerStatusBadge(true, data.folder);
+            return true;
+          }
+        } catch (_) {}
+      }
+
+      isServerOnline = false;
+      updateServerStatusBadge(false);
+      return false;
+    }
+
+    function updateServerStatusBadge(online, folder = '') {
+      if (!serverStatusBadge) return;
+      if (online) {
+        serverStatusBadge.className = 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs flex items-center gap-1';
+        serverStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 本機伺服器連線中 (自動存檔至資料夾)';
+        serverStatusBadge.title = `連線網址: ${serverBaseUrl}\n資料夾: ${folder || '當前目錄'}`;
+      } else {
+        serverStatusBadge.className = 'text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs flex items-center gap-1';
+        serverStatusBadge.innerHTML = '<span>💾</span> 瀏覽器本機儲存庫 (永久保留)';
+        serverStatusBadge.title = '目前直接以本機瀏覽器開啟，所有自訂圖片與進度均自動永久儲存在瀏覽器中。雙擊「啟動模擬器.bat」可啟用資料夾自動新增檔案。';
+      }
+    }
+
+    /**
+     * ==========================================
+     * 📋 門板素材清單總管 (支援修改名稱、手動刪除、清空預設)
+     * ==========================================
+     */
+    let allMaterialsList = [];
+    let currentRenamingItem = null;
+
+    async function initMaterialsList() {
+      // 1. 先從 IndexedDB 讀取已儲存的素材清單
+      let stored = await dbGetMaterials();
+
+      // 若完全為空 (第一次開啟)，載入 FOLDER_IMAGES 作為初始素材
+      if (!stored || stored.length === 0) {
+        stored = FOLDER_IMAGES.map((f, idx) => ({
+          id: `preset_${f.id || idx + 1}`,
+          file: f.file,
+          name: f.label,
+          dataUrl: (window.LOCAL_IMAGE_DATA && window.LOCAL_IMAGE_DATA[f.file]) || `./${encodeURIComponent(f.file)}`,
+          isCustom: false,
+          createdAt: Date.now() - (FOLDER_IMAGES.length - idx) * 1000
+        }));
+        // 批次儲存到 IndexedDB
+        for (const item of stored) {
+          await dbSaveMaterial(item);
+        }
+      }
+
+      allMaterialsList = stored;
+      renderMaterialsGrid();
+    }
+
+    function renderMaterialsGrid() {
+      if (!materialsGrid) return;
+      materialsGrid.innerHTML = '';
+
+      const searchKeyword = (searchMaterialInput?.value || '').trim().toLowerCase();
+      const filterType = filterMaterialSelect?.value || 'all';
+
+      const filtered = allMaterialsList.filter(item => {
+        const matchSearch = !searchKeyword || item.name.toLowerCase().includes(searchKeyword) || item.file.toLowerCase().includes(searchKeyword);
+        const matchFilter = filterType === 'all' || (filterType === 'custom' && item.isCustom) || (filterType === 'preset' && !item.isCustom);
+        return matchSearch && matchFilter;
+      });
+
+      if (materialCountBadge) {
+        materialCountBadge.textContent = filtered.length;
+      }
+
+      if (filtered.length === 0) {
+        materialsGrid.innerHTML = `
+          <div class="col-span-2 text-center py-8 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-slate-400 text-xs space-y-1">
+            <p>目前素材清單中無符合項目</p>
+            <p class="text-[10px] text-slate-400">點選上方上傳您的圖片，或點擊「還原預設」</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `bg-white hover:bg-sky-50/70 border ${item.isCustom ? 'border-sky-200' : 'border-slate-200'} hover:border-sky-300 rounded-lg p-2.5 transition flex flex-col items-center justify-between group shadow-2xs relative`;
+
+        const badgeText = item.isCustom ? '自訂' : '預設';
+        const badgeColor = item.isCustom ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-500';
+
+        card.innerHTML = `
+          <!-- 頂部標籤與修改/刪除按鈕 -->
+          <div class="w-full flex items-center justify-between mb-1.5">
+            <span class="text-[9px] px-1 py-0.2 rounded font-bold ${badgeColor}">${badgeText}</span>
+            <div class="flex items-center gap-0.5">
+              <button class="btn-rename-mat p-1 rounded hover:bg-sky-100 text-slate-400 hover:text-sky-700 transition" title="修改名稱">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+              </button>
+              <button class="btn-del-mat p-1 rounded hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition" title="從素材清單刪除">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 縮圖 (點擊置入門板) -->
+          <div class="w-full h-24 flex items-center justify-center p-1 bg-slate-50 group-hover:bg-white rounded mb-1.5 overflow-hidden border border-slate-100 cursor-pointer">
+            <img src="${item.dataUrl}" class="max-h-full max-w-full object-contain transition-transform group-hover:scale-105" alt="${item.name}" />
+          </div>
+
+          <!-- 名稱與檔名 -->
+          <div class="w-full text-center">
+            <div class="font-bold text-slate-800 text-xs truncate cursor-pointer hover:text-sky-600" title="點擊修改名稱: ${item.name}">${item.name}</div>
+            <div class="text-[9px] text-slate-400 font-mono truncate" title="${item.file}">${item.file}</div>
+          </div>
+
+          <!-- 加入門板按鈕 -->
+          <button class="btn-add-mat mt-2 w-full py-1 bg-sky-50 group-hover:bg-sky-600 text-sky-700 group-hover:text-white rounded text-[11px] font-semibold transition">
+            ＋ 加入門板 (去留白)
+          </button>
+        `;
+
+        card.querySelector('.btn-add-mat').addEventListener('click', (e) => {
+          e.stopPropagation();
+          loadMaterialItem(item);
+        });
+
+        card.querySelector('.w-full.h-24').addEventListener('click', () => {
+          loadMaterialItem(item);
+        });
+
+        card.querySelector('.btn-rename-mat').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openRenameModal(item);
+        });
+
+        card.querySelector('.font-bold.text-slate-800').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openRenameModal(item);
+        });
+
+        card.querySelector('.btn-del-mat').addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteMaterialItem(item);
+        });
+
+        materialsGrid.appendChild(card);
+      });
+    }
+
+    function loadMaterialItem(item) {
+      const img = new Image();
+      img.onload = () => {
+        addImageLayer(img, item.name);
+        showToast(`已將「${item.name}」置入門板！`);
+      };
+      img.onerror = () => {
+        showToast(`無法載入素材：${item.name}`, 'error');
+      };
+      img.src = item.dataUrl;
+    }
+
+    function openRenameModal(item) {
+      currentRenamingItem = item;
+      if (renameInput) renameInput.value = item.name;
+      if (renameModal) renameModal.classList.remove('hidden');
+      setTimeout(() => renameInput?.focus(), 100);
+    }
+
+    async function handleConfirmRename() {
+      if (!currentRenamingItem) return;
+      const newName = (renameInput?.value || '').trim();
+      if (!newName) {
+        alert('請輸入有效的素材名稱！');
+        return;
+      }
+
+      currentRenamingItem.name = newName;
+      await dbSaveMaterial(currentRenamingItem);
+
+      if (isServerOnline) {
+        try {
+          await fetch(`${serverBaseUrl}/api/materials/rename`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              oldFileName: currentRenamingItem.file,
+              newFileName: currentRenamingItem.file,
+              label: newName
+            })
+          });
+        } catch (_) {}
+      }
+
+      if (renameModal) renameModal.classList.add('hidden');
+      renderMaterialsGrid();
+      showToast(`已將素材名稱修改為「${newName}」！`);
+    }
+
+    async function deleteMaterialItem(item) {
+      if (!confirm(`確定要刪除「${item.name}」嗎？\n（將從側邊欄清單中移除，若伺服器連線中將同步自資料夾刪除實體檔案）`)) return;
+
+      // 1. 從 IndexedDB 刪除
+      await dbDeleteMaterial(item.id);
+
+      // 2. 從硬碟資料夾刪除實體檔案 (若伺服器連線)
+      if (isServerOnline) {
+        try {
+          await fetch(`${serverBaseUrl}/api/images/${encodeURIComponent(item.file)}`, {
+            method: 'DELETE'
+          });
+        } catch (_) {}
+      }
+
+      // 3. 從記憶體陣列移除並重新渲染
+      allMaterialsList = allMaterialsList.filter(m => m.id !== item.id);
+      renderMaterialsGrid();
+      showToast(`已成功刪除「${item.name}」！`, 'info');
+    }
+
+    async function clearPresetMaterials() {
+      const presets = allMaterialsList.filter(m => !m.isCustom);
+      if (presets.length === 0) {
+        showToast('目前清單中已無任何預設素材！', 'info');
+        return;
+      }
+
+      if (!confirm(`確定要清除所有 ${presets.length} 張內建預設素材嗎？\n（側邊欄將只保留您自己上傳的圖片，側邊清單瞬間清爽！隨時可按「還原預設」恢復）`)) return;
+
+      for (const p of presets) {
+        await dbDeleteMaterial(p.id);
+      }
+
+      allMaterialsList = allMaterialsList.filter(m => m.isCustom);
+      renderMaterialsGrid();
+      showToast('已清空內建預設素材，只保留您的自訂圖片！');
+    }
+
+    async function restorePresetMaterials() {
+      if (!confirm('確定要還原原廠 18 張內建模擬素材嗎？')) return;
+
+      const restoredPresets = FOLDER_IMAGES.map((f, idx) => ({
+        id: `preset_${f.id || idx + 1}`,
+        file: f.file,
+        name: f.label,
+        dataUrl: (window.LOCAL_IMAGE_DATA && window.LOCAL_IMAGE_DATA[f.file]) || `./${encodeURIComponent(f.file)}`,
+        isCustom: false,
+        createdAt: Date.now() - (FOLDER_IMAGES.length - idx) * 1000
+      }));
+
+      for (const p of restoredPresets) {
+        if (!allMaterialsList.some(m => m.id === p.id)) {
+          allMaterialsList.push(p);
+          await dbSaveMaterial(p);
+        }
+      }
+
+      renderMaterialsGrid();
+      showToast('已成功還原內建預設素材！');
+    }
+
+    async function loadAllFolderImages() {
+      const searchKeyword = (searchMaterialInput?.value || '').trim().toLowerCase();
+      const filterType = filterMaterialSelect?.value || 'all';
+
+      const visibleMaterials = allMaterialsList.filter(item => {
+        const matchSearch = !searchKeyword || item.name.toLowerCase().includes(searchKeyword) || item.file.toLowerCase().includes(searchKeyword);
+        const matchFilter = filterType === 'all' || (filterType === 'custom' && item.isCustom) || (filterType === 'preset' && !item.isCustom);
+        return matchSearch && matchFilter;
+      });
+
+      if (visibleMaterials.length === 0) {
+        showToast('目前無可載入的素材！', 'info');
+        return;
+      }
+
+      visibleMaterials.forEach((item, index) => {
+        const img = new Image();
+        img.onload = () => {
+          const col = index % 2;
+          const row = Math.floor(index / 2);
+          const posX = col === 0 ? 6.0 : 40.0;
+          const posY = 50.0 + row * 24.0;
+          addImageLayer(img, item.name, posX, posY);
+        };
+        img.src = item.dataUrl;
+      });
+      showToast(`已載入 ${visibleMaterials.length} 張素材到門板！`);
+    }
+
+    async function handleFileSelected(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUrl = e.target.result;
+        const displayName = file.name.replace(/\.[^/.]+$/, "");
+
+        const newMat = {
+          id: 'mat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+          file: file.name,
+          name: displayName,
+          dataUrl: dataUrl,
+          isCustom: true,
+          createdAt: Date.now()
+        };
+
+        // 1. 若伺服器連線，寫入本地硬碟資料夾實體檔案
+        if (isServerOnline) {
+          try {
+            const res = await fetch(`${serverBaseUrl}/api/upload`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileName: file.name,
+                dataUrl: dataUrl,
+                label: displayName
+              })
+            });
+            if (res.ok) {
+              const resData = await res.json();
+              if (resData.fileName) newMat.file = resData.fileName;
+              console.log('[+] 伺服器已成功在資料夾寫入檔案:', newMat.file);
+            }
+          } catch (err) {
+            console.warn('[!] 伺服器寫入檔案失敗:', err);
+          }
+        }
+
+        // 2. 儲存至 IndexedDB
+        await dbSaveMaterial(newMat);
+        allMaterialsList.unshift(newMat);
+
+        // 3. 重新渲染素材清單
+        renderMaterialsGrid();
+
+        // 4. 自動置入門板畫布
+        const img = new Image();
+        img.onload = () => {
+          addImageLayer(img, newMat.name);
+          autoSaveStateDebounced();
+          const serverNotice = isServerOnline ? '，實體檔案已新增至資料夾' : '';
+          showToast(`已新增「${newMat.name}」至側邊欄素材庫${serverNotice}！`);
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /**
+     * ==========================================
+     * 💾 畫布全自動儲存與進度恢復系統
+     * ==========================================
+     */
+    let autoSaveTimer = null;
+
+    function autoSaveStateDebounced() {
+      if (autoSaveTimer) clearTimeout(autoSaveTimer);
+      if (autoSaveStatusText) {
+        autoSaveStatusText.textContent = '自動儲存中...';
+      }
+      autoSaveTimer = setTimeout(() => {
+        autoSaveState();
+      }, 350);
+    }
+
+    async function autoSaveState(immediate = false) {
+      if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = null;
+      }
+
+      const serializedLayers = state.layers.map(layer => {
+        let dUrl = layer.dataUrl;
+        if (!dUrl) {
+          if (layer.img instanceof HTMLCanvasElement) {
+            dUrl = layer.img.toDataURL('image/png');
+          } else if (layer.img instanceof HTMLImageElement) {
+            dUrl = layer.img.src;
+          }
+          layer.dataUrl = dUrl;
+        }
+        return {
+          id: layer.id,
+          name: layer.name,
+          dataUrl: dUrl,
+          xCm: layer.xCm,
+          yCm: layer.yCm,
+          widthCm: layer.widthCm,
+          heightCm: layer.heightCm,
+          rotation: layer.rotation,
+          opacity: layer.opacity,
+          lockAspect: layer.lockAspect,
+          originalAspect: layer.originalAspect
+        };
+      });
+
+      const statePayload = {
+        id: 'current_state',
+        updatedAt: Date.now(),
+        layers: serializedLayers,
+        selectedLayerId: state.selectedLayerId,
+        settings: {
+          gridSizeCm: state.gridSizeCm,
+          showObstacles: state.showObstacles,
+          doorBgColor: state.doorBgColor,
+          autoTrimWhitespace: state.autoTrimWhitespace,
+          paperOrientation: state.paperOrientation,
+          clipToDoorBounds: state.clipToDoorBounds
+        }
+      };
+
+      // 1. 儲存至 IndexedDB
+      await dbSaveCanvasState(statePayload);
+
+      // 2. 若本地伺服器連線，儲存至本機檔案 canvas_state.json
+      if (isServerOnline) {
+        try {
+          await fetch(`${serverBaseUrl}/api/save-state`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(statePayload)
+          });
+        } catch (_) {}
+      }
+
+      // 更新頂部 UI 狀態
+      const timeStr = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      if (autoSaveStatusText) {
+        autoSaveStatusText.textContent = `已自動儲存 ${timeStr}`;
+      }
+      if (autoSaveIndicator) {
+        autoSaveIndicator.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-300 transition shadow-2xs';
+      }
+    }
+
+    async function restoreSavedState() {
+      let savedData = null;
+
+      // 1. 優先嘗試伺服器進度
+      if (isServerOnline) {
+        try {
+          const res = await fetch(`${serverBaseUrl}/api/load-state`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && !data.empty && data.layers) {
+              savedData = data;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 2. 降級嘗試 IndexedDB
+      if (!savedData) {
+        savedData = await dbGetCanvasState();
+      }
+
+      if (!savedData || !savedData.layers || savedData.layers.length === 0) {
+        return false;
+      }
+
+      // 恢復設定
+      if (savedData.settings) {
+        const s = savedData.settings;
+        if (typeof s.gridSizeCm === 'number') {
+          state.gridSizeCm = s.gridSizeCm;
+          document.querySelectorAll('.grid-btn').forEach(b => {
+            const val = parseInt(b.getAttribute('data-grid'), 10);
+            if (val === state.gridSizeCm) {
+              b.className = 'grid-btn py-1.5 border rounded border-sky-500 bg-sky-50 text-sky-700 font-bold text-center';
+            } else {
+              b.className = 'grid-btn py-1.5 border rounded border-slate-300 hover:bg-slate-100 text-center';
+            }
+          });
+        }
+        if (typeof s.showObstacles === 'boolean') {
+          state.showObstacles = s.showObstacles;
+          if (chkShowObstacles) chkShowObstacles.checked = s.showObstacles;
+        }
+        if (s.doorBgColor) {
+          state.doorBgColor = s.doorBgColor;
+        }
+        if (typeof s.autoTrimWhitespace === 'boolean') {
+          state.autoTrimWhitespace = s.autoTrimWhitespace;
+          if (chkAutoTrimWhitespace) chkAutoTrimWhitespace.checked = s.autoTrimWhitespace;
+        }
+        if (s.paperOrientation) {
+          setPaperOrientation(s.paperOrientation);
+        }
+        if (typeof s.clipToDoorBounds === 'boolean') {
+          state.clipToDoorBounds = s.clipToDoorBounds;
+          if (chkClipDoorBounds) chkClipDoorBounds.checked = s.clipToDoorBounds;
+        }
+      }
+
+      // 恢復圖層
+      state.layers = [];
+      let loadedCount = 0;
+      const totalToLoad = savedData.layers.length;
+
+      for (const item of savedData.layers) {
+        const img = new Image();
+        img.onload = () => {
+          state.layers.push({
+            id: item.id,
+            name: item.name,
+            img: img,
+            dataUrl: item.dataUrl,
+            xCm: item.xCm,
+            yCm: item.yCm,
+            widthCm: item.widthCm,
+            heightCm: item.heightCm,
+            rotation: item.rotation || 0,
+            opacity: typeof item.opacity === 'number' ? item.opacity : 1.0,
+            lockAspect: typeof item.lockAspect === 'boolean' ? item.lockAspect : true,
+            originalAspect: item.originalAspect || (item.widthCm / item.heightCm)
+          });
+
+          loadedCount++;
+          if (loadedCount === totalToLoad) {
+            // 恢復選中圖層
+            if (savedData.selectedLayerId && state.layers.some(l => l.id === savedData.selectedLayerId)) {
+              selectLayer(savedData.selectedLayerId);
+            } else if (state.layers.length > 0) {
+              selectLayer(state.layers[0].id);
+            }
+            renderAll();
+            updateLayerListUI();
+            showToast(`🟢 已自動恢復上次進度 (共 ${totalToLoad} 個素材)`);
+          }
+        };
+        img.onerror = () => {
+          loadedCount++;
+        };
+        img.src = item.dataUrl;
+      }
+
+      const timeStr = new Date(savedData.updatedAt || Date.now()).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+      if (autoSaveStatusText) {
+        autoSaveStatusText.textContent = `已載入 ${timeStr}`;
+      }
+      return true;
+    }
+
+    async function resetCanvasState() {
+      if (!confirm('確定要清空畫布並重置自動儲存進度嗎？\n（側邊欄的自訂素材庫仍會保留，僅清空畫布）')) return;
+
+      state.layers = [];
+      state.selectedLayerId = null;
+
+      await dbClearCanvasState();
+
+      if (isServerOnline) {
+        try {
+          await fetch(`${serverBaseUrl}/api/save-state`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ layers: [], updatedAt: Date.now() })
+          });
+        } catch (_) {}
+      }
+
+      updateInspectorUI();
+      updateLayerListUI();
+      renderAll();
+
+      if (autoSaveStatusText) {
+        autoSaveStatusText.textContent = '畫布已重置';
+      }
+      showToast('畫布與進度已重置清空！', 'info');
+    }
+
+
+
+    function switchTab(btnId, contentId) {
+      const tabs = [
+        { btn: tabBtnGallery, content: tabContentGallery },
+        { btn: tabBtnElement, content: tabContentElement },
+        { btn: tabBtnDoor, content: tabContentDoor }
+      ];
+
+      tabs.forEach(t => {
+        if (t.btn.id === btnId) {
+          t.btn.className = 'flex-1 py-3 px-2 border-b-2 border-sky-600 text-sky-700 bg-white transition flex items-center justify-center gap-1.5 font-bold';
+          t.content.classList.remove('hidden');
+        } else {
+          t.btn.className = 'flex-1 py-3 px-2 border-b-2 border-transparent hover:text-slate-900 transition flex items-center justify-center gap-1.5';
+          t.content.classList.add('hidden');
+        }
+      });
+    }
+
+    function handleScaleTransform(item, init, handle, dx, dy) {
+      let newW = init.widthCm;
+      let newH = init.heightCm;
+      let newX = init.xCm;
+      let newY = init.yCm;
+
+      if (handle === 'se') {
+        newW = Math.max(1.0, init.widthCm + dx);
+        newH = item.lockAspect ? (newW / item.originalAspect) : Math.max(1.0, init.heightCm + dy);
+      } else if (handle === 'sw') {
+        newW = Math.max(1.0, init.widthCm - dx);
+        newX = init.xCm + (init.widthCm - newW);
+        newH = item.lockAspect ? (newW / item.originalAspect) : Math.max(1.0, init.heightCm + dy);
+      } else if (handle === 'ne') {
+        newW = Math.max(1.0, init.widthCm + dx);
+        newH = item.lockAspect ? (newW / item.originalAspect) : Math.max(1.0, init.heightCm - dy);
+        newY = init.yCm + (init.heightCm - newH);
+      } else if (handle === 'nw') {
+        newW = Math.max(1.0, init.widthCm - dx);
+        newX = init.xCm + (init.widthCm - newW);
+        newH = item.lockAspect ? (newW / item.originalAspect) : Math.max(1.0, init.heightCm - dy);
+        newY = init.yCm + (init.heightCm - newH);
+      }
+
+      item.widthCm = Number(newW.toFixed(1));
+      item.heightCm = Number(newH.toFixed(1));
+      item.xCm = Number(newX.toFixed(1));
+      item.yCm = Number(newY.toFixed(1));
+    }
+
+    function deleteSelectedLayer() {
+      if (!state.selectedLayerId) return;
+      state.layers = state.layers.filter(l => l.id !== state.selectedLayerId);
+      state.selectedLayerId = null;
+      updateInspectorUI();
+      updateLayerListUI();
+      renderAll();
+      if (typeof autoSaveStateDebounced === 'function') autoSaveStateDebounced();
+    }
+
+    function updateRulerStatusDisplay() {
+      if (!state.measurePoints) return;
+      const { x1, y1, x2, y2 } = state.measurePoints;
+      const dx = Math.abs(x2 - x1);
+      const dy = Math.abs(y2 - y1);
+      const len = Math.sqrt(dx * dx + dy * dy);
+
+      rulerLengthDisplay.textContent = `${len.toFixed(1)} cm`;
+      rulerDxDisplay.textContent = `ΔX: ${dx.toFixed(1)} cm`;
+      rulerDyDisplay.textContent = `ΔY: ${dy.toFixed(1)} cm`;
+    }
+
+    function exportCanvasImage() {
+      const prevSelection = state.selectedLayerId;
+      state.selectedLayerId = null;
+      renderAll();
+
+      const link = document.createElement('a');
+      link.download = `門板尺寸模擬預覽圖_${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = mainCanvas.toDataURL('image/png');
+      link.click();
+
+      state.selectedLayerId = prevSelection;
+      renderAll();
+    }
+
+    function openSizeListModal() {
+      modalListTbody.innerHTML = '';
+      if (state.layers.length === 0) {
+        modalListEmpty.classList.remove('hidden');
+        modalListTable.classList.add('hidden');
+      } else {
+        modalListEmpty.classList.add('hidden');
+        modalListTable.classList.remove('hidden');
+
+        state.layers.forEach((layer, index) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition';
+          const imgSrc = (layer.img instanceof HTMLCanvasElement) ? layer.img.toDataURL() : layer.img.src;
+
+          tr.innerHTML = `
+            <td class="py-2.5 px-3 font-semibold text-slate-500">${index + 1}</td>
+            <td class="py-2.5 px-3">
+              <img src="${imgSrc}" class="w-8 h-8 object-contain rounded border border-slate-200 bg-white" />
+            </td>
+            <td class="py-2.5 px-3 font-medium text-slate-800">${layer.name}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-sky-700">${layer.widthCm.toFixed(1)} × ${layer.heightCm.toFixed(1)} cm</td>
+            <td class="py-2.5 px-3 text-right text-slate-600">X: ${layer.xCm.toFixed(1)}, Y: ${layer.yCm.toFixed(1)} cm</td>
+            <td class="py-2.5 px-3 text-right text-slate-500">${layer.rotation}°</td>
+          `;
+          modalListTbody.appendChild(tr);
+        });
+      }
+
+      listModal.classList.remove('hidden');
+    }
+
+    function copySizeListText() {
+      if (state.layers.length === 0) {
+        alert('目前無素材清單可複製');
+        return;
+      }
+      let text = `【門板素材尺寸與位置輸出清單 (已精準裁切留白)】\n門板尺寸：73.0 cm × 197.0 cm\n--------------------------------------------\n`;
+      state.layers.forEach((layer, i) => {
+        text += `#${i + 1} ${layer.name}\n`;
+        text += `  - 建議印刷尺寸：寬 ${layer.widthCm.toFixed(1)} cm × 高 ${layer.heightCm.toFixed(1)} cm\n`;
+        text += `  - 門板相對位置：距左邊 ${layer.xCm.toFixed(1)} cm，距頂端 ${layer.yCm.toFixed(1)} cm\n`;
+        text += `  - 旋轉角度：${layer.rotation}°\n\n`;
+      });
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('已成功複製尺寸清單到剪貼簿！');
+      });
+    }
+
+    function downloadSizeListCsv() {
+      if (state.layers.length === 0) {
+        alert('目前無素材清單可下載');
+        return;
+      }
+      let csv = "\uFEFF序號,素材名稱,建議寬度(cm),建議高度(cm),門板X座標(cm),門板Y座標(cm),旋轉角度\n";
+      state.layers.forEach((l, i) => {
+        csv += `${i + 1},"${l.name}",${l.widthCm.toFixed(1)},${l.heightCm.toFixed(1)},${l.xCm.toFixed(1)},${l.yCm.toFixed(1)},${l.rotation}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `門板素材尺寸清單_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /**
+     * ==========================================
+     * ✂️ 門板超出邊界檢測與裁切運算核心
+     * ==========================================
+     */
+    function checkLayerOverflow(layer) {
+      if (!layer) return { overflows: false, left: false, right: false, top: false, bottom: false };
+      let minX = layer.xCm;
+      let maxX = layer.xCm + layer.widthCm;
+      let minY = layer.yCm;
+      let maxY = layer.yCm + layer.heightCm;
+
+      if (layer.rotation % 360 !== 0) {
+        const cx = layer.xCm + layer.widthCm / 2;
+        const cy = layer.yCm + layer.heightCm / 2;
+        const rad = (layer.rotation * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const hw = layer.widthCm / 2;
+        const hh = layer.heightCm / 2;
+        const corners = [
+          { x: -hw, y: -hh },
+          { x: hw, y: -hh },
+          { x: hw, y: hh },
+          { x: -hw, y: hh }
+        ];
+        let rMinX = Infinity, rMaxX = -Infinity, rMinY = Infinity, rMaxY = -Infinity;
+        corners.forEach(c => {
+          const rx = cx + c.x * cos - c.y * sin;
+          const ry = cy + c.x * sin + c.y * cos;
+          if (rx < rMinX) rMinX = rx;
+          if (rx > rMaxX) rMaxX = rx;
+          if (ry < rMinY) rMinY = ry;
+          if (ry > rMaxY) rMaxY = ry;
+        });
+        minX = rMinX; maxX = rMaxX; minY = rMinY; maxY = rMaxY;
+      }
+
+      const left = minX < -0.05;
+      const right = maxX > DOOR_REAL_WIDTH_CM + 0.05;
+      const top = minY < -0.05;
+      const bottom = maxY > DOOR_REAL_HEIGHT_CM + 0.05;
+      const overflows = left || right || top || bottom;
+
+      return { overflows, left, right, top, bottom, minX, maxX, minY, maxY };
+    }
+
+    function getClippedLayerData(layer, resolutionScale = null) {
+      const ov = checkLayerOverflow(layer);
+      if (!ov.overflows) {
+        return {
+          img: layer.img,
+          xCm: layer.xCm,
+          yCm: layer.yCm,
+          widthCm: layer.widthCm,
+          heightCm: layer.heightCm,
+          clipped: false,
+          fullyOutside: false
+        };
+      }
+
+      const clipLeft = Math.max(0, ov.minX);
+      const clipRight = Math.min(DOOR_REAL_WIDTH_CM, ov.maxX);
+      const clipTop = Math.max(0, ov.minY);
+      const clipBottom = Math.min(DOOR_REAL_HEIGHT_CM, ov.maxY);
+
+      if (clipRight <= clipLeft || clipBottom <= clipTop) {
+        return { img: null, xCm: 0, yCm: 0, widthCm: 0, heightCm: 0, clipped: true, fullyOutside: true };
+      }
+
+      const newWidthCm = Number((clipRight - clipLeft).toFixed(1));
+      const newHeightCm = Number((clipBottom - clipTop).toFixed(1));
+
+      if (newWidthCm <= 0 || newHeightCm <= 0) {
+        return { img: null, xCm: 0, yCm: 0, widthCm: 0, heightCm: 0, clipped: true, fullyOutside: true };
+      }
+
+      // 未旋轉情況：原圖精確矩形裁切 (100% 無損像素)
+      if (layer.rotation % 360 === 0) {
+        const origW = layer.widthCm;
+        const origH = layer.heightCm;
+        const imgW = layer.img.width;
+        const imgH = layer.img.height;
+
+        const sx = Math.max(0, Math.min(imgW, ((clipLeft - layer.xCm) / origW) * imgW));
+        const sy = Math.max(0, Math.min(imgH, ((clipTop - layer.yCm) / origH) * imgH));
+        const sw = Math.max(1, Math.min(imgW - sx, (newWidthCm / origW) * imgW));
+        const sh = Math.max(1, Math.min(imgH - sy, (newHeightCm / origH) * imgH));
+
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = Math.round(sw);
+        cropCanvas.height = Math.round(sh);
+        const cctx = cropCanvas.getContext('2d');
+        cctx.drawImage(layer.img, sx, sy, sw, sh, 0, 0, cropCanvas.width, cropCanvas.height);
+
+        return {
+          img: cropCanvas,
+          xCm: Number(clipLeft.toFixed(1)),
+          yCm: Number(clipTop.toFixed(1)),
+          widthCm: newWidthCm,
+          heightCm: newHeightCm,
+          clipped: true,
+          fullyOutside: false
+        };
+      }
+
+      // 旋轉情況：離屏畫布門板邊界交集渲染
+      const pxPerCm = resolutionScale || Math.max(30, (layer.img.width / layer.widthCm));
+      const offW = Math.round(newWidthCm * pxPerCm);
+      const offH = Math.round(newHeightCm * pxPerCm);
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = Math.max(1, offW);
+      cropCanvas.height = Math.max(1, offH);
+      const cctx = cropCanvas.getContext('2d');
+
+      cctx.save();
+      cctx.beginPath();
+      cctx.rect(0, 0, offW, offH);
+      cctx.clip();
+
+      const cx = (layer.xCm + layer.widthCm / 2 - clipLeft) * pxPerCm;
+      const cy = (layer.yCm + layer.heightCm / 2 - clipTop) * pxPerCm;
+      const lw = layer.widthCm * pxPerCm;
+      const lh = layer.heightCm * pxPerCm;
+
+      cctx.translate(cx, cy);
+      cctx.rotate((layer.rotation * Math.PI) / 180);
+      cctx.drawImage(layer.img, -lw / 2, -lh / 2, lw, lh);
+      cctx.restore();
+
+      return {
+        img: cropCanvas,
+        xCm: Number(clipLeft.toFixed(1)),
+        yCm: Number(clipTop.toFixed(1)),
+        widthCm: newWidthCm,
+        heightCm: newHeightCm,
+        clipped: true,
+        fullyOutside: false
+      };
+    }
+
+    function trimSelectedLayerToDoor() {
+      const item = getSelectedLayer();
+      if (!item) return;
+      const clippedData = getClippedLayerData(item);
+      if (clippedData.fullyOutside) {
+        if (confirm(`「${item.name}」已完全超出門板之外（門內無任何部分），確定要直接刪除此素材嗎？`)) {
+          deleteSelectedLayer();
+        }
+        return;
+      }
+
+      if (!clippedData.clipped) {
+        showToast(`「${item.name}」完全在門板之內，無需裁切！`, 'info');
+        return;
+      }
+
+      item.img = clippedData.img;
+      item.dataUrl = (clippedData.img instanceof HTMLCanvasElement) ? clippedData.img.toDataURL('image/png') : item.dataUrl;
+      item.xCm = clippedData.xCm;
+      item.yCm = clippedData.yCm;
+      item.widthCm = clippedData.widthCm;
+      item.heightCm = clippedData.heightCm;
+      item.rotation = 0; // 裁切後自動直立貼齊門邊
+      item.originalAspect = clippedData.widthCm / clippedData.heightCm;
+
+      updateInspectorUI();
+      renderAll();
+      autoSaveStateDebounced();
+      showToast(`✂️ 已砍掉「${item.name}」超出門板的部分！更新尺寸：${item.widthCm} × ${item.heightCm} cm`);
+    }
+
+    /**
+     * ==========================================
+     * 🖨️ 影印店大圖輸出與智能拼版系統 (Imposition & Print Shop Output)
+     * ==========================================
+     */
+    const printState = {
+      mode: 'compact', // 'compact' | 'fullDoor'
+      rollWidthCm: 90.0,
+      dpi: 150,
+      showCropMarks: true,
+      showItemLabels: true,
+      uprightItems: true,
+      clipDoorOverflow: true, // 自動刪除超出門板的圖案
+      spacingCm: 1.5,
+      paddingCm: 1.5,
+      layoutResult: null
+    };
+
+    function openPrintImpositionModal() {
+      if (state.layers.length === 0) {
+        showToast('請先在門板上放置至少一張素材圖片！', 'error');
+        return;
+      }
+      printImpositionModal?.classList.remove('hidden');
+      updatePrintImposition();
+    }
+
+    function closePrintImpositionModal() {
+      printImpositionModal?.classList.add('hidden');
+    }
+
+    function calculateImpositionLayout() {
+      if (state.layers.length === 0) {
+        return {
+          items: [],
+          widthCm: printState.rollWidthCm,
+          heightCm: 30.0,
+          caiFloat: 1.0,
+          totalCai: 1,
+          pxW: Math.round((printState.rollWidthCm / 2.54) * printState.dpi),
+          pxH: Math.round((30.0 / 2.54) * printState.dpi)
+        };
+      }
+
+      if (printState.mode === 'fullDoor') {
+        const totalW = DOOR_REAL_WIDTH_CM; // 73.0
+        const totalH = DOOR_REAL_HEIGHT_CM; // 197.0
+        const items = state.layers.map((layer, idx) => ({
+          idx: idx + 1,
+          layer: layer,
+          name: layer.name,
+          img: layer.img,
+          widthCm: layer.widthCm,
+          heightCm: layer.heightCm,
+          origW: layer.widthCm,
+          origH: layer.heightCm,
+          packedXCm: layer.xCm,
+          packedYCm: layer.yCm,
+          rotation: layer.rotation,
+          opacity: layer.opacity
+        }));
+
+        const totalArea = totalW * totalH;
+        const caiFloat = totalArea / 900;
+        const caiInt = Math.max(1, Math.ceil(caiFloat));
+
+        return {
+          mode: 'fullDoor',
+          items: items,
+          widthCm: totalW,
+          heightCm: totalH,
+          caiFloat: caiFloat,
+          totalCai: caiInt,
+          pxW: Math.round((totalW / 2.54) * printState.dpi),
+          pxH: Math.round((totalH / 2.54) * printState.dpi)
+        };
+      }
+
+      // 智能緊湊拼版 (Shelf Packing 貨架排列演算法)
+      const rollW = Math.max(20.0, printState.rollWidthCm);
+      const padding = printState.paddingCm;
+      const spacing = printState.spacingCm;
+      const usableWidth = rollW - padding * 2;
+
+      const items = [];
+      state.layers.forEach((layer, idx) => {
+        let targetImg = layer.img;
+        let targetW = layer.widthCm;
+        let targetH = layer.heightCm;
+        let origW = layer.widthCm;
+        let origH = layer.heightCm;
+        let rot = 0;
+        let isClipped = false;
+
+        // 若啟用自動刪除超出門板的圖案
+        if (printState.clipDoorOverflow) {
+          const clippedData = getClippedLayerData(layer, printState.dpi / 2.54);
+          if (clippedData.fullyOutside) {
+            // 完全在門外，不列印此完全懸空的圖塊
+            return;
+          }
+          if (clippedData.clipped) {
+            targetImg = clippedData.img;
+            targetW = clippedData.widthCm;
+            targetH = clippedData.heightCm;
+            origW = targetW;
+            origH = targetH;
+            rot = 0; // 裁切邊已對齊門框，直立輸出便於裁切
+            isClipped = true;
+          }
+        }
+
+        if (!isClipped) {
+          if (!printState.uprightItems && layer.rotation % 360 !== 0) {
+            rot = layer.rotation;
+            const rad = (rot * Math.PI) / 180;
+            const cos = Math.abs(Math.cos(rad));
+            const sin = Math.abs(Math.sin(rad));
+            targetW = Number((layer.widthCm * cos + layer.heightCm * sin).toFixed(1));
+            targetH = Number((layer.widthCm * sin + layer.heightCm * cos).toFixed(1));
+          }
+        }
+
+        items.push({
+          idx: idx + 1,
+          layer: layer,
+          name: isClipped ? `${layer.name} (門緣裁切版)` : layer.name,
+          img: targetImg,
+          widthCm: targetW,
+          heightCm: targetH,
+          origW: origW,
+          origH: origH,
+          rotation: rot,
+          opacity: 1.0,
+          isClipped: isClipped
+        });
+      });
+
+      // 依照高度由大到小排序 (First Fit Decreasing Height)
+      items.sort((a, b) => b.heightCm - a.heightCm);
+
+      const shelves = [];
+      let currentY = padding;
+
+      items.forEach(item => {
+        let placed = false;
+        for (const shelf of shelves) {
+          if (shelf.currentX + item.widthCm <= padding + usableWidth) {
+            item.packedXCm = Number(shelf.currentX.toFixed(1));
+            item.packedYCm = Number(shelf.y.toFixed(1));
+            shelf.currentX += item.widthCm + spacing;
+            shelf.items.push(item);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) {
+          const newShelf = {
+            y: currentY,
+            height: item.heightCm,
+            currentX: padding + item.widthCm + spacing,
+            items: [item]
+          };
+          item.packedXCm = Number(padding.toFixed(1));
+          item.packedYCm = Number(currentY.toFixed(1));
+          shelves.push(newShelf);
+          currentY += item.heightCm + spacing;
+        }
+      });
+
+      const totalH = Number(Math.max(20.0, currentY - spacing + padding).toFixed(1));
+      const totalArea = rollW * totalH;
+      const caiFloat = totalArea / 900;
+      const caiInt = Math.max(1, Math.ceil(caiFloat));
+
+      return {
+        mode: 'compact',
+        items: items,
+        widthCm: rollW,
+        heightCm: totalH,
+        caiFloat: caiFloat,
+        totalCai: caiInt,
+        pxW: Math.round((rollW / 2.54) * printState.dpi),
+        pxH: Math.round((totalH / 2.54) * printState.dpi)
+      };
+    }
+
+    function updatePrintImposition() {
+      const layout = calculateImpositionLayout();
+      printState.layoutResult = layout;
+
+      if (statOutputDim) statOutputDim.textContent = `${layout.widthCm.toFixed(1)} × ${layout.heightCm.toFixed(1)} cm`;
+      if (statPixelDim) statPixelDim.textContent = `${layout.pxW} × ${layout.pxH} px (${printState.dpi} DPI)`;
+      if (statTotalCai) statTotalCai.textContent = `${layout.totalCai} 材 (${layout.caiFloat.toFixed(1)} 材)`;
+      if (statCaiSpan) statCaiSpan.textContent = `${layout.totalCai}`;
+      if (statLayerCount) statLayerCount.textContent = `${layout.items.length}`;
+
+      const estCostMin = Math.max(100, layout.totalCai * 20);
+      const estCostMax = Math.max(120, layout.totalCai * 30);
+      if (statEstimatedCost) statEstimatedCost.textContent = `約 NT$ ${estCostMin} ~ ${estCostMax}`;
+
+      const sepCostMin = layout.items.length * 100;
+      const sepCostMax = layout.items.length * 150;
+      const savedMin = Math.max(0, sepCostMin - estCostMax);
+      const savedMax = Math.max(0, sepCostMax - estCostMin);
+
+      if (statSavedAmount) {
+        statSavedAmount.textContent = `NT$ ${savedMin} ~ ${savedMax}`;
+      }
+      if (badgeCostSaving) {
+        if (layout.items.length > 1) {
+          const pct = Math.round(((sepCostMin - estCostMin) / sepCostMin) * 100);
+          badgeCostSaving.textContent = `預估省 ${Math.max(10, pct)}%+`;
+          badgeCostSaving.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold';
+        } else {
+          badgeCostSaving.textContent = '基本起印';
+          badgeCostSaving.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-500 text-white font-medium';
+        }
+      }
+      if (impositionStatusText) {
+        impositionStatusText.textContent = `共 ${layout.items.length} 個素材圖塊 (計 ${layout.totalCai} 材)`;
+      }
+
+      renderImpositionPreview(layout);
+    }
+
+    function renderImpositionPreview(layout) {
+      if (!impositionPreviewCanvas || !layout) return;
+      const canvas = impositionPreviewCanvas;
+      const container = document.getElementById('impositionPreviewContainer');
+      if (!container) return;
+
+      const containerW = container.clientWidth - 24;
+      const containerH = container.clientHeight - 24;
+
+      const scaleX = containerW / layout.widthCm;
+      const scaleY = containerH / layout.heightCm;
+      const previewScale = Math.min(scaleX, scaleY, 8.0);
+
+      canvas.width = Math.round(layout.widthCm * previewScale);
+      canvas.height = Math.round(layout.heightCm * previewScale);
+
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (layout.mode === 'fullDoor') {
+        ctx.fillStyle = state.doorBgColor || '#ffffff';
+      } else {
+        ctx.fillStyle = '#ffffff';
+      }
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+      layout.items.forEach(item => {
+        const ix = item.packedXCm * previewScale;
+        const iy = item.packedYCm * previewScale;
+        const iw = item.widthCm * previewScale;
+        const ih = item.heightCm * previewScale;
+
+        if (printState.showCropMarks) {
+          ctx.save();
+          ctx.setLineDash([3, 2]);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(ix, iy, iw, ih);
+
+          ctx.setLineDash([]);
+          ctx.strokeStyle = '#0284c7';
+          ctx.lineWidth = 1.2;
+          const markLen = Math.max(4, 0.4 * previewScale);
+
+          ctx.beginPath();
+          ctx.moveTo(ix - markLen, iy); ctx.lineTo(ix, iy);
+          ctx.moveTo(ix, iy - markLen); ctx.lineTo(ix, iy);
+          ctx.moveTo(ix + iw, iy); ctx.lineTo(ix + iw + markLen, iy);
+          ctx.moveTo(ix + iw, iy - markLen); ctx.lineTo(ix + iw, iy);
+          ctx.moveTo(ix - markLen, iy + ih); ctx.lineTo(ix, iy + ih);
+          ctx.moveTo(ix, iy + ih); ctx.lineTo(ix, iy + ih + markLen);
+          ctx.moveTo(ix + iw, iy + ih); ctx.lineTo(ix + iw + markLen, iy + ih);
+          ctx.moveTo(ix + iw, iy + ih); ctx.lineTo(ix + iw, iy + ih + markLen);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (item.img) {
+          ctx.save();
+          if (item.rotation % 360 !== 0) {
+            ctx.translate(ix + iw / 2, iy + ih / 2);
+            ctx.rotate((item.rotation * Math.PI) / 180);
+            ctx.drawImage(item.img, -iw / 2, -ih / 2, iw, ih);
+          } else {
+            ctx.drawImage(item.img, ix, iy, iw, ih);
+          }
+          ctx.restore();
+        }
+
+        if (printState.showItemLabels) {
+          ctx.save();
+          const fontSize = Math.max(9, Math.round(0.35 * previewScale));
+          ctx.font = `bold ${fontSize}px sans-serif`;
+          const labelText = `#${item.idx} ${item.name} (${item.origW || item.widthCm}×${item.origH || item.heightCm}cm)`;
+          const textW = ctx.measureText(labelText).width;
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+          ctx.fillRect(ix + 2, iy + 2, textW + 6, fontSize + 4);
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.strokeRect(ix + 2, iy + 2, textW + 6, fontSize + 4);
+
+          ctx.fillStyle = '#0369a1';
+          ctx.fillText(labelText, ix + 5, iy + fontSize + 1);
+          ctx.restore();
+        }
+      });
+    }
+
+    async function downloadHighResPrintImage() {
+      const layout = printState.layoutResult || calculateImpositionLayout();
+      if (!layout || layout.items.length === 0) {
+        showToast('無素材可輸出！', 'error');
+        return;
+      }
+
+      if (impositionLoadingOverlay) impositionLoadingOverlay.classList.remove('hidden');
+      await new Promise(r => setTimeout(r, 80));
+
+      try {
+        const dpi = printState.dpi;
+        const pxPerCm = dpi / 2.54;
+        const fullW = Math.round(layout.widthCm * pxPerCm);
+        const fullH = Math.round(layout.heightCm * pxPerCm);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = fullW;
+        canvas.height = fullH;
+        const ctx = canvas.getContext('2d');
+
+        if (layout.mode === 'fullDoor') {
+          ctx.fillStyle = state.doorBgColor || '#ffffff';
+        } else {
+          ctx.fillStyle = '#ffffff';
+        }
+        ctx.fillRect(0, 0, fullW, fullH);
+
+        layout.items.forEach(item => {
+          const ix = item.packedXCm * pxPerCm;
+          const iy = item.packedYCm * pxPerCm;
+          const iw = item.widthCm * pxPerCm;
+          const ih = item.heightCm * pxPerCm;
+
+          if (printState.showCropMarks) {
+            ctx.save();
+            ctx.setLineDash([Math.round(4 * pxPerCm / 10), Math.round(3 * pxPerCm / 10)]);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = Math.max(1.5, Math.round(0.04 * pxPerCm));
+            ctx.strokeRect(ix, iy, iw, ih);
+
+            ctx.setLineDash([]);
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = Math.max(2, Math.round(0.06 * pxPerCm));
+            const markLen = 0.6 * pxPerCm;
+
+            ctx.beginPath();
+            ctx.moveTo(ix - markLen, iy); ctx.lineTo(ix, iy);
+            ctx.moveTo(ix, iy - markLen); ctx.lineTo(ix, iy);
+            ctx.moveTo(ix + iw, iy); ctx.lineTo(ix + iw + markLen, iy);
+            ctx.moveTo(ix + iw, iy - markLen); ctx.lineTo(ix + iw, iy);
+            ctx.moveTo(ix - markLen, iy + ih); ctx.lineTo(ix, iy + ih);
+            ctx.moveTo(ix, iy + ih); ctx.lineTo(ix, iy + ih + markLen);
+            ctx.moveTo(ix + iw, iy + ih); ctx.lineTo(ix + iw + markLen, iy + ih);
+            ctx.moveTo(ix + iw, iy + ih); ctx.lineTo(ix + iw, iy + ih + markLen);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          if (item.img) {
+            ctx.save();
+            if (item.rotation % 360 !== 0) {
+              ctx.translate(ix + iw / 2, iy + ih / 2);
+              ctx.rotate((item.rotation * Math.PI) / 180);
+              ctx.drawImage(item.img, -iw / 2, -ih / 2, iw, ih);
+            } else {
+              ctx.drawImage(item.img, ix, iy, iw, ih);
+            }
+            ctx.restore();
+          }
+
+          if (printState.showItemLabels) {
+            ctx.save();
+            const fontSize = Math.max(14, Math.round(0.35 * pxPerCm));
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            const labelText = `#${item.idx} ${item.name} (寬${(item.origW || item.widthCm).toFixed(1)}cm × 高${(item.origH || item.heightCm).toFixed(1)}cm)`;
+            const textW = ctx.measureText(labelText).width;
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+            ctx.fillRect(ix + 2, iy + 2, textW + 14, fontSize + 8);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(ix + 2, iy + 2, textW + 14, fontSize + 8);
+
+            ctx.fillStyle = '#0369a1';
+            ctx.fillText(labelText, ix + 7, iy + fontSize + 2);
+            ctx.restore();
+          }
+        });
+
+        const modeLabel = layout.mode === 'compact' ? `拼版_寬${layout.widthCm}cmX長${layout.heightCm}cm` : `門板滿版_73x197cm`;
+        const fileName = `影印店大圖輸出_${modeLabel}_${dpi}DPI_${layout.totalCai}材.png`;
+
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            showToast('生成圖檔失敗，請嘗試選擇 150 DPI', 'error');
+            return;
+          }
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          link.click();
+          URL.revokeObjectURL(url);
+          showToast(`🎉 已成功下載 1:1 影印店原寸高解析圖檔 (${fullW} × ${fullH} px)！`);
+        }, 'image/png');
+
+      } catch (err) {
+        console.error('匯出大圖輸出檔案失敗:', err);
+        showToast('匯出失敗，可能解析度過大超出記憶體限制，建議切換為 150 DPI', 'error');
+      } finally {
+        if (impositionLoadingOverlay) impositionLoadingOverlay.classList.add('hidden');
+      }
+    }
+
+    function copyPrintSpecText() {
+      const layout = printState.layoutResult || calculateImpositionLayout();
+      if (!layout || layout.items.length === 0) {
+        alert('目前無素材清單可複製');
+        return;
+      }
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      let text = `====================================================\n`;
+      text += `【影印店大圖輸出發包單 / 門板貼紙拼版規格書】\n`;
+      text += `產出日期：${dateStr}\n`;
+      text += `====================================================\n\n`;
+      text += `一、 基本印刷規格（請影印店依以下參數設定）：\n`;
+      text += `  ■ 輸出模式：${layout.mode === 'compact' ? '智能緊湊拼版 (自剪省錢模式)' : '門板 1:1 滿版輸出'}\n`;
+      text += `  ■ 實體輸出尺寸：寬 ${layout.widthCm.toFixed(1)} cm × 長 ${layout.heightCm.toFixed(1)} cm (1:1 原尺寸輸出，請勿任意縮放)\n`;
+      text += `  ■ 建議計費才數：${layout.totalCai} 材 (精確才數: ${layout.caiFloat.toFixed(2)} 材)\n`;
+      text += `  ■ 輸出解析度：${printState.dpi} DPI (影像像素：${layout.pxW} × ${layout.pxH} px)\n`;
+      text += `  ■ 建議承印材質：PVC 背膠貼紙 + 霧膜 (貼門專用，防刮防水耐磨不反光)\n`;
+      text += `  ■ 裁切交件方式：整卷輸出即可，客戶會依圖內裁切十字標記自備美工刀剪裁\n\n`;
+      text += `二、 拼版內含圖塊清單 (共 ${layout.items.length} 件)：\n`;
+      layout.items.forEach((item, i) => {
+        text += `  #${i + 1} 【${item.name}】\n`;
+        text += `     - 裁切後實際尺寸：寬 ${(item.origW || item.widthCm).toFixed(1)} cm × 高 ${(item.origH || item.heightCm).toFixed(1)} cm\n`;
+      });
+      text += `\n====================================================\n`;
+      text += `※ 提示：請影印店輸出時勾選「依實際尺寸 100% 列印」，切勿勾選「配合紙張縮放」，以確保公分尺寸精準無誤！\n`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('📋 已成功複製「影印店發包規格單」到剪貼簿！可直接貼在 LINE 或發信給影印店！');
+      }).catch(() => {
+        alert(text);
+      });
+    }
+
+    /**
+     * 常用紙張規格套用與方向切換
+     */
+    function setPaperOrientation(orientation) {
+      state.paperOrientation = orientation;
+      if (orientation === 'portrait') {
+        btnPaperPortrait.className = 'px-2 py-0.5 rounded font-bold bg-sky-100 text-sky-800 transition';
+        btnPaperLandscape.className = 'px-2 py-0.5 rounded text-slate-600 hover:text-slate-900 transition';
+      } else {
+        btnPaperPortrait.className = 'px-2 py-0.5 rounded text-slate-600 hover:text-slate-900 transition';
+        btnPaperLandscape.className = 'px-2 py-0.5 rounded font-bold bg-sky-100 text-sky-800 transition';
+      }
+      updatePaperPresetLabels();
+    }
+
+    function updatePaperPresetLabels() {
+      const isLandscape = state.paperOrientation === 'landscape';
+      document.querySelectorAll('.paper-preset-btn').forEach(btn => {
+        const key = btn.dataset.paper;
+        const preset = PAPER_PRESETS[key];
+        if (!preset) return;
+        const dimSpan = btn.querySelector('.paper-dim-label');
+        if (dimSpan) {
+          if (preset.w === preset.h) {
+            dimSpan.textContent = `${preset.w}×${preset.h}`;
+          } else {
+            const w = isLandscape ? preset.h : preset.w;
+            const h = isLandscape ? preset.w : preset.h;
+            dimSpan.textContent = `${w}×${h}`;
+          }
+        }
+      });
+    }
+
+    function applyPaperPreset(paperKey) {
+      const preset = PAPER_PRESETS[paperKey];
+      if (!preset) return;
+
+      let item = getSelectedLayer();
+      if (!item) {
+        if (state.layers.length === 1) {
+          selectLayer(state.layers[0].id);
+          item = state.layers[0];
+        } else {
+          alert('請先在畫布或圖層列表中點選要套用尺寸的圖片！');
+          return;
+        }
+      }
+
+      const isLandscape = state.paperOrientation === 'landscape';
+      const targetW = (isLandscape && preset.w !== preset.h) ? preset.h : preset.w;
+      const targetH = (isLandscape && preset.w !== preset.h) ? preset.w : preset.h;
+
+      if (item.lockAspect) {
+        // 等比例縮放：讓圖片最適化容納在紙張尺寸框內 (contain fit)
+        const aspect = item.originalAspect || (item.widthCm / item.heightCm);
+        const boxAspect = targetW / targetH;
+
+        if (aspect >= boxAspect) {
+          // 圖片比紙張更寬，以紙張寬度 targetW 為準
+          item.widthCm = Number(targetW.toFixed(1));
+          item.heightCm = Number((targetW / aspect).toFixed(1));
+        } else {
+          // 圖片比紙張更高，以紙張高度 targetH 為準
+          item.heightCm = Number(targetH.toFixed(1));
+          item.widthCm = Number((targetH * aspect).toFixed(1));
+        }
+      } else {
+        // 自由比例：精確設為紙張規格尺寸
+        item.widthCm = Number(targetW.toFixed(1));
+        item.heightCm = Number(targetH.toFixed(1));
+      }
+
+      updateInspectorUI();
+      renderAll();
+
+      // 按鈕點擊視覺回饋
+      const clickedBtn = document.querySelector(`.paper-preset-btn[data-paper="${paperKey}"]`);
+      if (clickedBtn) {
+        clickedBtn.classList.add('ring-2', 'ring-sky-500', 'bg-sky-100');
+        setTimeout(() => {
+          clickedBtn.classList.remove('ring-2', 'ring-sky-500', 'bg-sky-100');
+        }, 250);
+      }
+    }
+
+    /**
+     * 事件監聽與交互
+     */
+    function setupEventListeners() {
+      tabBtnGallery.addEventListener('click', () => switchTab('tabBtnGallery', 'tabContentGallery'));
+      tabBtnElement.addEventListener('click', () => switchTab('tabBtnElement', 'tabContentElement'));
+      tabBtnDoor.addEventListener('click', () => switchTab('tabBtnDoor', 'tabContentDoor'));
+
+      // 素材庫搜尋與篩選
+      searchMaterialInput?.addEventListener('input', renderMaterialsGrid);
+      filterMaterialSelect?.addEventListener('change', renderMaterialsGrid);
+      btnClearPresetMaterials?.addEventListener('click', clearPresetMaterials);
+      btnRestorePresetMaterials?.addEventListener('click', restorePresetMaterials);
+
+      // 素材更名視窗事件
+      btnConfirmRename?.addEventListener('click', handleConfirmRename);
+      btnCancelRename?.addEventListener('click', () => renameModal?.classList.add('hidden'));
+      btnCloseRenameModal?.addEventListener('click', () => renameModal?.classList.add('hidden'));
+      renameInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleConfirmRename();
+        if (e.key === 'Escape') renameModal?.classList.add('hidden');
+      });
+
+      btnLoadAllFolderImages.addEventListener('click', loadAllFolderImages);
+      btnClearAllCanvas.addEventListener('click', () => {
+        if (state.layers.length === 0) return;
+        if (confirm('確定要清空畫布上的所有素材嗎？')) {
+          state.layers = [];
+          state.selectedLayerId = null;
+          updateInspectorUI();
+          updateLayerListUI();
+          renderAll();
+          autoSaveStateDebounced();
+        }
+      });
+
+      chkAutoTrimWhitespace.addEventListener('change', (e) => {
+        state.autoTrimWhitespace = e.target.checked;
+      });
+
+      imageFileInput.addEventListener('change', (e) => {
+        Array.from(e.target.files).forEach(handleFileSelected);
+        imageFileInput.value = '';
+      });
+
+      window.addEventListener('dragover', (e) => e.preventDefault());
+      window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          Array.from(e.dataTransfer.files).forEach(handleFileSelected);
+        }
+      });
+
+      window.addEventListener('paste', (e) => {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            handleFileSelected(blob);
+            break;
+          }
+        }
+      });
+
+      btnZoomIn.addEventListener('click', () => setZoom(state.zoom + 0.15));
+      btnZoomOut.addEventListener('click', () => setZoom(state.zoom - 0.15));
+      btnResetZoom.addEventListener('click', () => setZoom(1.0));
+      btnFitScreen.addEventListener('click', fitToScreen);
+
+      viewportContainer.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.12 : -0.12;
+        const rect = viewportContainer.getBoundingClientRect();
+        setZoom(state.zoom + delta, e.clientX - rect.left, e.clientY - rect.top);
+      }, { passive: false });
+
+      let isSpacePressed = false;
+      window.addEventListener('keydown', (e) => {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        if (e.code === 'Space') {
+          isSpacePressed = true;
+          viewportContainer.style.cursor = 'grab';
+        }
+
+        if (e.code === 'Delete' || e.code === 'Backspace') {
+          deleteSelectedLayer();
+        }
+
+        const item = getSelectedLayer();
+        if (item && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+          e.preventDefault();
+          const step = e.shiftKey ? 2.0 : 0.5;
+          if (e.code === 'ArrowUp') item.yCm = Number((item.yCm - step).toFixed(1));
+          if (e.code === 'ArrowDown') item.yCm = Number((item.yCm + step).toFixed(1));
+          if (e.code === 'ArrowLeft') item.xCm = Number((item.xCm - step).toFixed(1));
+          if (e.code === 'ArrowRight') item.xCm = Number((item.xCm + step).toFixed(1));
+
+          updateInspectorUI();
+          renderAll();
+        }
+
+        if (state.selectedLayerId) {
+          if (e.key === ']' || e.code === 'PageUp') {
+            e.preventDefault();
+            if (e.shiftKey) moveLayerTop(state.selectedLayerId);
+            else moveLayerUp(state.selectedLayerId);
+          } else if (e.key === '[' || e.code === 'PageDown') {
+            e.preventDefault();
+            if (e.shiftKey) moveLayerBottom(state.selectedLayerId);
+            else moveLayerDown(state.selectedLayerId);
+          }
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+          isSpacePressed = false;
+          viewportContainer.style.cursor = state.activeTool === 'ruler' ? 'crosshair' : 'default';
+        }
+      });
+
+      btnToolSelect.addEventListener('click', () => switchTool('select'));
+      btnToolRuler.addEventListener('click', () => switchTool('ruler'));
+
+      function switchTool(tool) {
+        state.activeTool = tool;
+        if (tool === 'select') {
+          btnToolSelect.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-300 transition';
+          btnToolRuler.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition';
+          rulerGuideTag.classList.add('hidden');
+          rulerStatusBar.classList.add('hidden');
+          viewportContainer.style.cursor = 'default';
+        } else {
+          btnToolRuler.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-400 transition';
+          btnToolSelect.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition';
+          rulerGuideTag.classList.remove('hidden');
+          rulerStatusBar.classList.remove('hidden');
+          viewportContainer.style.cursor = 'crosshair';
+        }
+        renderAll();
+      }
+
+      btnClearMeasure.addEventListener('click', () => {
+        state.measurePoints = null;
+        rulerLengthDisplay.textContent = '0.0 cm';
+        rulerDxDisplay.textContent = 'ΔX: 0.0 cm';
+        rulerDyDisplay.textContent = 'ΔY: 0.0 cm';
+        renderAll();
+      });
+
+      // ==========================================
+      // 🚀 核心 POINTER EVENTS 拖曳移動引擎
+      // ==========================================
+      viewportContainer.addEventListener('pointerdown', (e) => {
+        if (e.button === 1 || isSpacePressed) {
+          state.isPanning = true;
+          state.startPanX = e.clientX - state.panX;
+          state.startPanY = e.clientY - state.panY;
+          viewportContainer.style.cursor = 'grabbing';
+          viewportContainer.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          return;
+        }
+
+        if (e.button !== 0) return;
+
+        e.preventDefault();
+        const coords = getDoorCoordsFromEvent(e);
+
+        if (state.activeTool === 'ruler') {
+          state.isMeasuring = true;
+          state.measurePoints = {
+            x1: coords.doorXCm,
+            y1: coords.doorYCm,
+            x2: coords.doorXCm,
+            y2: coords.doorYCm
+          };
+          viewportContainer.setPointerCapture(e.pointerId);
+          updateRulerStatusDisplay();
+          renderAll();
+          return;
+        }
+
+        const selected = getSelectedLayer();
+        let clickedMode = null;
+        let targetLayer = null;
+
+        if (selected) {
+          clickedMode = hitTestLayer(selected, coords.doorXCm, coords.doorYCm, true);
+          if (clickedMode) {
+            targetLayer = selected;
+          }
+        }
+
+        if (!targetLayer) {
+          for (let i = state.layers.length - 1; i >= 0; i--) {
+            const l = state.layers[i];
+            const mode = hitTestLayer(l, coords.doorXCm, coords.doorYCm, false);
+            if (mode) {
+              targetLayer = l;
+              clickedMode = mode;
+              break;
+            }
+          }
+        }
+
+        if (targetLayer) {
+          if (!selected || selected.id !== targetLayer.id) {
+            selectLayer(targetLayer.id);
+          }
+          state.transformMode = clickedMode;
+          state.dragPointerId = e.pointerId;
+          state.dragStartXCm = coords.doorXCm;
+          state.dragStartYCm = coords.doorYCm;
+          state.initialItemState = {
+            xCm: targetLayer.xCm,
+            yCm: targetLayer.yCm,
+            widthCm: targetLayer.widthCm,
+            heightCm: targetLayer.heightCm,
+            rotation: targetLayer.rotation
+          };
+
+          viewportContainer.setPointerCapture(e.pointerId);
+          viewportContainer.style.cursor = clickedMode === 'move' ? 'grabbing' : 'crosshair';
+        } else {
+          if (state.selectedLayerId !== null) {
+            state.selectedLayerId = null;
+            updateInspectorUI();
+            updateLayerListUI();
+            renderAll();
+          }
+        }
+      });
+
+      viewportContainer.addEventListener('pointermove', (e) => {
+        if (state.isPanning) {
+          state.panX = e.clientX - state.startPanX;
+          state.panY = e.clientY - state.startPanY;
+          updateViewportTransform();
+          return;
+        }
+
+        const coords = getDoorCoordsFromEvent(e);
+
+        if (state.isMeasuring && state.measurePoints) {
+          state.measurePoints.x2 = coords.doorXCm;
+          state.measurePoints.y2 = coords.doorYCm;
+          updateRulerStatusDisplay();
+          renderAll();
+          return;
+        }
+
+        if (state.transformMode && state.initialItemState) {
+          const item = getSelectedLayer();
+          if (!item) return;
+
+          const dx = coords.doorXCm - state.dragStartXCm;
+          const dy = coords.doorYCm - state.dragStartYCm;
+          const init = state.initialItemState;
+
+          if (state.transformMode === 'move') {
+            item.xCm = Number((init.xCm + dx).toFixed(1));
+            item.yCm = Number((init.yCm + dy).toFixed(1));
+          } else if (state.transformMode === 'rotate') {
+            const cx = init.xCm + init.widthCm / 2;
+            const cy = init.yCm + init.heightCm / 2;
+            const angleRad = Math.atan2(coords.doorYCm - cy, coords.doorXCm - cx);
+            let deg = (angleRad * 180) / Math.PI + 90;
+            if (deg < 0) deg += 360;
+            item.rotation = Math.round(deg) % 360;
+          } else {
+            handleScaleTransform(item, init, state.transformMode, dx, dy);
+          }
+
+          updateInspectorUI();
+          renderAll();
+          return;
+        }
+
+        if (!state.transformMode && !state.isPanning && !state.isMeasuring) {
+          if (state.activeTool === 'ruler') {
+            viewportContainer.style.cursor = 'crosshair';
+            return;
+          }
+          if (isSpacePressed) {
+            viewportContainer.style.cursor = 'grab';
+            return;
+          }
+
+          let hoverCursor = 'default';
+          const selected = getSelectedLayer();
+          if (selected) {
+            const mode = hitTestLayer(selected, coords.doorXCm, coords.doorYCm, true);
+            if (mode === 'rotate') hoverCursor = 'crosshair';
+            else if (mode === 'nw' || mode === 'se') hoverCursor = 'nwse-resize';
+            else if (mode === 'ne' || mode === 'sw') hoverCursor = 'nesw-resize';
+            else if (mode === 'move') hoverCursor = 'grab';
+          }
+          if (hoverCursor === 'default') {
+            for (let i = state.layers.length - 1; i >= 0; i--) {
+              if (hitTestLayer(state.layers[i], coords.doorXCm, coords.doorYCm, false)) {
+                hoverCursor = 'grab';
+                break;
+              }
+            }
+          }
+          viewportContainer.style.cursor = hoverCursor;
+        }
+      });
+
+      viewportContainer.addEventListener('pointerup', (e) => {
+        if (state.isPanning) state.isPanning = false;
+        if (state.isMeasuring) state.isMeasuring = false;
+        if (state.transformMode) {
+          state.transformMode = null;
+          state.initialItemState = null;
+          updateLayerListUI();
+          autoSaveStateDebounced();
+        }
+
+        try {
+          viewportContainer.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+
+        viewportContainer.style.cursor = isSpacePressed ? 'grab' : (state.activeTool === 'ruler' ? 'crosshair' : 'default');
+      });
+
+      viewportContainer.addEventListener('pointercancel', (e) => {
+        state.isPanning = false;
+        state.isMeasuring = false;
+        state.transformMode = null;
+        try {
+          viewportContainer.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+      });
+
+      btnNudgeUp.addEventListener('click', () => nudgeItem(0, -1.0));
+      btnNudgeDown.addEventListener('click', () => nudgeItem(0, 1.0));
+      btnNudgeLeft.addEventListener('click', () => nudgeItem(-1.0, 0));
+      btnNudgeRight.addEventListener('click', () => nudgeItem(1.0, 0));
+
+      function nudgeItem(dx, dy) {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.xCm = Number((item.xCm + dx).toFixed(1));
+        item.yCm = Number((item.yCm + dy).toFixed(1));
+        updateInspectorUI();
+        renderAll();
+        autoSaveStateDebounced();
+      }
+
+      btnCenterBoth.addEventListener('click', () => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.xCm = Number(((DOOR_REAL_WIDTH_CM - item.widthCm) / 2).toFixed(1));
+        item.yCm = Number(((DOOR_REAL_HEIGHT_CM - item.heightCm) / 2).toFixed(1));
+        updateInspectorUI();
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      btnAlignLeft.addEventListener('click', () => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.xCm = 0.0;
+        updateInspectorUI();
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      btnAlignRight.addEventListener('click', () => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.xCm = Number((DOOR_REAL_WIDTH_CM - item.widthCm).toFixed(1));
+        updateInspectorUI();
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      inputWidthCm.addEventListener('input', (e) => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        const newW = Math.max(0.5, parseFloat(e.target.value) || 0.5);
+        item.widthCm = newW;
+        if (item.lockAspect) {
+          item.heightCm = Number((newW / item.originalAspect).toFixed(1));
+          inputHeightCm.value = item.heightCm.toFixed(1);
+        }
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      inputHeightCm.addEventListener('input', (e) => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        const newH = Math.max(0.5, parseFloat(e.target.value) || 0.5);
+        item.heightCm = newH;
+        if (item.lockAspect) {
+          item.widthCm = Number((newH * item.originalAspect).toFixed(1));
+          inputWidthCm.value = item.widthCm.toFixed(1);
+        }
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      chkLockAspectRatio.addEventListener('change', (e) => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.lockAspect = e.target.checked;
+        aspectRatioBadge.textContent = item.lockAspect ? '鎖定比例' : '自由比例';
+        autoSaveStateDebounced();
+      });
+
+      btnResetOriginalAspect.addEventListener('click', () => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.heightCm = Number((item.widthCm / item.originalAspect).toFixed(1));
+        inputHeightCm.value = item.heightCm.toFixed(1);
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      btnPaperPortrait.addEventListener('click', () => {
+        setPaperOrientation('portrait');
+        autoSaveStateDebounced();
+      });
+      btnPaperLandscape.addEventListener('click', () => {
+        setPaperOrientation('landscape');
+        autoSaveStateDebounced();
+      });
+
+      document.querySelectorAll('.paper-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const paperKey = btn.getAttribute('data-paper');
+          applyPaperPreset(paperKey);
+          autoSaveStateDebounced();
+        });
+      });
+
+      inputPosXCm.addEventListener('input', (e) => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.xCm = parseFloat(e.target.value) || 0;
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      inputPosYCm.addEventListener('input', (e) => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.yCm = parseFloat(e.target.value) || 0;
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      sliderRotate.addEventListener('input', (e) => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.rotation = parseInt(e.target.value, 10);
+        rotationValDisplay.textContent = `${item.rotation}°`;
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      btnResetRotate.addEventListener('click', () => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.rotation = 0;
+        sliderRotate.value = 0;
+        rotationValDisplay.textContent = '0°';
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      sliderOpacity.addEventListener('input', (e) => {
+        const item = getSelectedLayer();
+        if (!item) return;
+        item.opacity = parseInt(e.target.value, 10) / 100;
+        opacityValDisplay.textContent = `${Math.round(item.opacity * 100)}%`;
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      btnLayerBringToFront.addEventListener('click', () => {
+        if (!state.selectedLayerId) return;
+        moveLayerTop(state.selectedLayerId);
+      });
+
+      btnLayerBringForward.addEventListener('click', () => {
+        if (!state.selectedLayerId) return;
+        moveLayerUp(state.selectedLayerId);
+      });
+
+      btnLayerSendBackward.addEventListener('click', () => {
+        if (!state.selectedLayerId) return;
+        moveLayerDown(state.selectedLayerId);
+      });
+
+      btnLayerSendToBack.addEventListener('click', () => {
+        if (!state.selectedLayerId) return;
+        moveLayerBottom(state.selectedLayerId);
+      });
+
+      btnDeleteSelected.addEventListener('click', deleteSelectedLayer);
+
+      chkShowObstacles.addEventListener('change', (e) => {
+        state.showObstacles = e.target.checked;
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      document.querySelectorAll('.grid-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.grid-btn').forEach(b => {
+            b.className = 'grid-btn py-1.5 border rounded border-slate-300 hover:bg-slate-100 text-center';
+          });
+          e.target.className = 'grid-btn py-1.5 border rounded border-sky-500 bg-sky-50 text-sky-700 font-bold text-center';
+          state.gridSizeCm = parseInt(e.target.getAttribute('data-grid'), 10);
+          renderAll();
+          autoSaveStateDebounced();
+        });
+      });
+
+      document.querySelectorAll('.door-color-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          state.doorBgColor = e.target.getAttribute('data-color');
+          renderAll();
+          autoSaveStateDebounced();
+        });
+      });
+
+      btnManualSave?.addEventListener('click', async () => {
+        await autoSaveState(true);
+        showToast('💾 畫布進度已手動儲存完畢！');
+      });
+
+      btnResetCanvasState?.addEventListener('click', () => {
+        resetCanvasState();
+      });
+
+      btnExportImage.addEventListener('click', exportCanvasImage);
+      btnExportList.addEventListener('click', openSizeListModal);
+      btnCloseListModal.addEventListener('click', () => listModal.classList.add('hidden'));
+      btnCopyListText.addEventListener('click', copySizeListText);
+      btnDownloadListCsv.addEventListener('click', downloadSizeListCsv);
+
+      // 影印店大圖輸出與拼版工坊事件
+      btnOpenPrintImposition?.addEventListener('click', openPrintImpositionModal);
+      btnClosePrintModal?.addEventListener('click', closePrintImpositionModal);
+
+      // 輸出模式切換 (compact vs fullDoor)
+      document.querySelectorAll('input[name="impositionMode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          printState.mode = e.target.value;
+          if (sectionRollWidth) {
+            sectionRollWidth.style.display = printState.mode === 'compact' ? 'block' : 'none';
+          }
+          updatePrintImposition();
+        });
+      });
+
+      // 捲筒幅寬按鈕
+      document.querySelectorAll('.btn-roll-width').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.btn-roll-width').forEach(b => {
+            b.className = 'btn-roll-width py-1.5 px-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 font-medium text-center transition';
+          });
+          e.target.className = 'btn-roll-width py-1.5 px-2 border rounded-lg font-bold text-center transition bg-amber-500 text-white border-amber-600';
+          const w = parseFloat(e.target.getAttribute('data-width')) || 90.0;
+          printState.rollWidthCm = w;
+          if (inputCustomRollWidth) inputCustomRollWidth.value = '';
+          updatePrintImposition();
+        });
+      });
+
+      // 自訂捲筒幅寬
+      inputCustomRollWidth?.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (val && val >= 20 && val <= 500) {
+          document.querySelectorAll('.btn-roll-width').forEach(b => {
+            b.className = 'btn-roll-width py-1.5 px-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 font-medium text-center transition';
+          });
+          printState.rollWidthCm = val;
+          updatePrintImposition();
+        }
+      });
+
+      // DPI 選擇
+      selectDpi?.addEventListener('change', (e) => {
+        printState.dpi = parseInt(e.target.value, 10) || 150;
+        updatePrintImposition();
+      });
+
+      // 裁切線、標籤、直立擺放開關
+      chkShowCropMarks?.addEventListener('change', (e) => {
+        printState.showCropMarks = e.target.checked;
+        updatePrintImposition();
+      });
+      chkShowItemLabels?.addEventListener('change', (e) => {
+        printState.showItemLabels = e.target.checked;
+        updatePrintImposition();
+      });
+      chkUprightItems?.addEventListener('change', (e) => {
+        printState.uprightItems = e.target.checked;
+        updatePrintImposition();
+      });
+      chkClipDoorOverflowPrint?.addEventListener('change', (e) => {
+        printState.clipDoorOverflow = e.target.checked;
+        updatePrintImposition();
+      });
+
+      // 門板邊界裁切與超出修剪按鈕
+      btnTrimSelectedToDoor?.addEventListener('click', trimSelectedLayerToDoor);
+      chkClipDoorBounds?.addEventListener('change', (e) => {
+        state.clipToDoorBounds = e.target.checked;
+        renderAll();
+        autoSaveStateDebounced();
+      });
+
+      // 下載大圖與複製發包單按鈕
+      btnDownloadPrintImage?.addEventListener('click', downloadHighResPrintImage);
+      btnCopyPrintSpec?.addEventListener('click', copyPrintSpecText);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      initCanvasDimensions();
+      await initDB();
+      await checkServerConnection();
+      await initMaterialsList();
+      setupEventListeners();
+      fitToScreen();
+      renderAll();
+      await restoreSavedState();
+
+      window.addEventListener('resize', () => {
+        fitToScreen();
+        if (printImpositionModal && !printImpositionModal.classList.contains('hidden')) {
+          updatePrintImposition();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

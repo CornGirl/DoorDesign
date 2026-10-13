@@ -1,0 +1,10 @@
+{
+  "layers": [],
+  "settings": {
+    "gridSizeCm": 5,
+    "showObstacles": true,
+    "doorBgColor": "#ffffff",
+    "autoTrimWhitespace": true,
+    "paperOrientation": "portrait"
+  }
+}
